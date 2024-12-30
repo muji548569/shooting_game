@@ -1,4 +1,5 @@
 import pygame
+import random
 
 # 初始化 pygame
 pygame.init()
@@ -13,7 +14,16 @@ pygame.display.set_caption("彈幕射擊遊戲")
 ui_images = [
     pygame.image.load(f'Asset/BG/UI_{i}.png') for i in range(9)
 ]
+
+# 加載圖片
 imgStar = pygame.image.load('Asset/Star.png')
+imgPlayer = pygame.image.load('Asset/player.png')
+imgLauncher = pygame.image.load('Asset/launcher.png')
+imgPlayerBullet01 = pygame.image.load('Asset/player_bullet_1.png')
+imgEnemy01 = pygame.image.load('Asset/enemy_01.png')
+imgEnemyBullet01 = pygame.image.load('Asset/enemy_bullet_1.png')
+
+
 
 # 方框區域設定
 top_left = (gameWidth, 0)
@@ -22,15 +32,10 @@ columns = 10  # 方框的寬度包含 10 個方塊
 rows = 20     # 方框的高度包含 20 個方塊
 
 # Player
-imgPlayer = pygame.image.load('Asset/player.png')
 playerSize = 32
 playerX = gameWidth // 2
 playerY = HEIGHT - 50
 playerSpeed = 5
-
-
-# Enemy圖片
-imgEnemy = pygame.image.load('Asset\enemy_01.png')
 
 # Enemy類
 class Enemy():
@@ -40,15 +45,65 @@ class Enemy():
         self.enemyX = x
         self.enemyY = y
         self.enemySpeed = speed
-    # 生成Enemy
-    def ShowEnemy(self):
-        screen.blit(self.imgEnemy, (self.enemyX, self.enemyY))
-        self.enemyX += self.enemySpeed
-        if self.enemyX > gameWidth + 2*self.enemySize or self.enemyX < 0 - 2*self.enemySize:
-            self.enemySpeed *= -1
+
+numbersOfEnemies = 5
+enemies = []
+for i in range(numbersOfEnemies):
+    enemies.append(Enemy(imgEnemy01, random.randint(100, 300), 100, 2))
+
+# 生成Enemy
+def ShowEnemy():
+    global enemyX, enemyY, enemySpeed
+    for i in enemies:
+        screen.blit(i.imgEnemy, (i.enemyX, i.enemyY))
+        i.enemyX += i.enemySpeed
+        if i.enemyX > gameWidth + 2*i.enemySize or i.enemyX < 0 - 2*i.enemySize:
+            i.enemySpeed *= -1
             # todo 
             # 刪除自身
     
+# Bullet類
+class Bullet():
+    def __init__(self):
+        self.img = imgPlayerBullet01
+        self.x = playerX
+        self.y = playerY + 10
+        self.speed = 10
+bullets = [] #保存現有子彈
+
+# 生成子彈
+def showBullets():
+    for i in bullets:
+        screen.blit(i.img, (i.x, i.y))
+        i.y -= i.speed
+        if i.y < -30:
+            bullets.remove(i)
+
+# 設定射擊間隔和追蹤上次射擊時間
+shootCooldown = 300  # 300毫秒（0.3秒）
+lastShootTime = 0  # 初始化為0
+
+# Player事件處理
+def PlayerEvents():
+    global playerX, playerY, lastShootTime  # 宣告全域變數
+    # 玩家移動
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT] and playerX > 0:
+        playerX -= playerSpeed
+    if keys[pygame.K_RIGHT] and playerX < gameWidth - playerSize:
+        playerX += playerSpeed
+    if keys[pygame.K_UP] and playerY > 0:
+        playerY -= playerSpeed
+    if keys[pygame.K_DOWN] and playerY < HEIGHT - playerSize:
+        playerY += playerSpeed
+    #玩家射擊
+    if keys[pygame.K_LSHIFT]:
+        currentTime = pygame.time.get_ticks()   # 獲取當前時間
+        if currentTime - lastShootTime > shootCooldown:  # 比較時間差
+            bullets.append(Bullet())
+            lastShootTime = currentTime  # 更新上次射擊時間
+
+
 # 繪製右側UI框
 def DrawUI():
     # 繪製方框
@@ -80,21 +135,6 @@ def DrawUI():
             screen.blit(image, (x, y))
     screen.blit(imgStar, (512, 400))
 
-# Player事件處理
-def PlayerEvents():
-    global playerX, playerY  # 宣告全域變數
-    # 玩家移動
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT] and playerX > 0:
-        playerX -= playerSpeed
-    if keys[pygame.K_RIGHT] and playerX < gameWidth - playerSize:
-        playerX += playerSpeed
-    if keys[pygame.K_UP] and playerY > 0:
-        playerY -= playerSpeed
-    if keys[pygame.K_DOWN] and playerY < HEIGHT - playerSize:
-        playerY += playerSpeed   
-
-
 # 時鐘
 clock = pygame.time.Clock()
 
@@ -102,7 +142,7 @@ clock = pygame.time.Clock()
 running = True
 
 # 初始化enemy
-enemy01 = Enemy(imgEnemy, gameWidth/2, 100, 5)
+enemy01 = Enemy(imgEnemy01, gameWidth/2, 100, 5)
 
 while running:
     # 填充背景顏色
@@ -112,14 +152,12 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-    
-    PlayerEvents()
-    
+
     #玩家圖像
     screen.blit(imgPlayer, (playerX, playerY))
-    
-
-    enemy01.ShowEnemy()
+    PlayerEvents()
+    ShowEnemy()
+    showBullets()
     
     DrawUI()
     
