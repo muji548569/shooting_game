@@ -29,6 +29,7 @@ imgLauncher = pygame.image.load('Asset/launcher.png')
 imgPlayerBullet01 = pygame.image.load('Asset/player_bullet_1.png')
 imgEnemy01 = pygame.image.load('Asset/enemy_01.png')
 imgEnemyBullet01 = pygame.image.load('Asset/enemy_bullet_1.png')
+imgEnemyBullet02 = pygame.image.load('Asset/enemy_bullet_2.png')
 
 # 添加音效 todo
 
@@ -58,7 +59,7 @@ class Enemy():
                     enemies.remove(self)
                     score += 500
                 
-
+# todo 敵人出現時間
 numbersOfEnemies = 5
 enemies = []
 for i in range(numbersOfEnemies):
@@ -90,7 +91,7 @@ class Bullet():
             bullet_center_y = self.y + self.img.get_height() / 2
             enemy_center_x = e.x + e.size / 2
             enemy_center_y = e.y + e.size / 2
-            if distance(bullet_center_x, bullet_center_y, enemy_center_x, enemy_center_y) < 15:
+            if distance(bullet_center_x, bullet_center_y, enemy_center_x, enemy_center_y) < 20:
                 if self in bullets:  # 確保子彈仍然存在於列表中
                     bullets.remove(self)
                 e.Hurt()  # 減少敵人生命值
@@ -115,6 +116,66 @@ def showBullets():
         if bullet in bullets:  # 確保子彈仍然存在於列表中
             bullets.remove(bullet)
 
+# Enemy Bullet 類
+class EnemyBullet:
+    def __init__(self, x, y, angle):
+        self.img = imgEnemyBullet02
+        self.x = x
+        self.y = y
+        self.speed = 2
+        self.angle = angle  # 移動角度
+
+    def move(self):
+        self.x += self.speed * math.cos(self.angle)
+        self.y += self.speed * math.sin(self.angle)
+
+    def draw(self):
+        screen.blit(self.img, (self.x, self.y))
+
+    def is_off_screen(self):
+        return self.x < 0 or self.x > gameWidth or self.y < 0 or self.y > HEIGHT
+
+# 保存敵機子彈
+enemy_bullets = []
+
+# 生成敵機子彈
+enemy_shoot_cooldown = 1000 
+last_enemy_shoot_time = 0
+
+def generate_enemy_bullets():
+    global last_enemy_shoot_time
+    current_time = pygame.time.get_ticks()
+    if current_time - last_enemy_shoot_time > enemy_shoot_cooldown:
+        for e in enemies:
+            angle_to_player = math.atan2(playerY - e.y, playerX - e.x)
+            for i in range(-1, 2):  # 生成3發子彈，角度略有不同
+                bullet_angle = angle_to_player + math.radians(i * 10)  # 每發子彈相差10度
+                enemy_bullets.append(EnemyBullet(e.x + e.size / 2, e.y + e.size / 2, bullet_angle))
+        last_enemy_shoot_time = current_time
+
+# 繪製與更新敵機子彈
+def update_enemy_bullets():
+    bullets_to_remove = []
+    for bullet in enemy_bullets:
+        bullet.move()
+        bullet.draw()
+        if bullet.is_off_screen():
+            bullets_to_remove.append(bullet)
+        # 子彈與玩家碰撞邏輯
+        bullet_center_x = bullet.x + bullet.img.get_width() / 2
+        bullet_center_y = bullet.y + bullet.img.get_height() / 2
+        player_center_x = playerX + playerSize / 2
+        player_center_y = playerY + playerSize / 2
+        if distance(bullet_center_x, bullet_center_y, player_center_x, player_center_y) < 10:
+            # todo 玩家受傷邏輯
+            print("玩家受擊！")  
+            bullets_to_remove.append(bullet)
+
+    # 移除需要刪除的子彈
+    for bullet in bullets_to_remove: 
+        if bullet in enemy_bullets:
+            enemy_bullets.remove(bullet)
+
 
 # 設定射擊間隔和追蹤上次射擊時間
 shootCooldown = 200
@@ -133,7 +194,7 @@ def PlayerEvents():
         playerY -= playerSpeed
     if keys[pygame.K_DOWN] and playerY < HEIGHT - playerSize:
         playerY += playerSpeed
-    #玩家射擊
+    #玩家射擊 
     if keys[pygame.K_LSHIFT]:
         currentTime = pygame.time.get_ticks()   # 獲取當前時間
         if currentTime - lastShootTime > shootCooldown:  # 比較時間差
@@ -203,6 +264,9 @@ while running:
     PlayerEvents()
     ShowEnemy()
     showBullets()
+    generate_enemy_bullets()
+    update_enemy_bullets()
+    
     
     DrawUI()
     
