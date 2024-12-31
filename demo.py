@@ -11,12 +11,18 @@ gameWidth = 448
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("彈幕射擊遊戲")
 
+# 方框區域設定
+top_left = (gameWidth, 0)
+block_size = 32  # 假設每個方塊的大小是 32x32
+columns = 10  # 方框的寬度包含 10 個方塊
+rows = 20     # 方框的高度包含 20 個方塊
+
 # 加載UI圖片
 ui_images = [
     pygame.image.load(f'Asset/BG/UI_{i}.png') for i in range(9)
 ]
-
 # 加載圖片
+imgBackGround = pygame.image.load('Asset/BG/space.png')
 imgStar = pygame.image.load('Asset/Star.png')
 imgPlayer = pygame.image.load('Asset/player.png')
 imgLauncher = pygame.image.load('Asset/launcher.png')
@@ -24,13 +30,7 @@ imgPlayerBullet01 = pygame.image.load('Asset/player_bullet_1.png')
 imgEnemy01 = pygame.image.load('Asset/enemy_01.png')
 imgEnemyBullet01 = pygame.image.load('Asset/enemy_bullet_1.png')
 
-
-
-# 方框區域設定
-top_left = (gameWidth, 0)
-block_size = 32  # 假設每個方塊的大小是 32x32
-columns = 10  # 方框的寬度包含 10 個方塊
-rows = 20     # 方框的高度包含 20 個方塊
+# 添加音效 todo
 
 # Player
 playerSize = 32
@@ -50,7 +50,14 @@ class Enemy():
     # 受擊
     def Hurt(self):
         self.health -= 1
-    
+    def Death(self):
+        global score
+        for e in enemies:
+            if(self.health <= 0):
+                if self in enemies:
+                    enemies.remove(self)
+                    score += 500
+                
 
 numbersOfEnemies = 5
 enemies = []
@@ -77,14 +84,22 @@ class Bullet():
         self.speed = 10
     #碰撞檢測
     def Collision(self):
+        global score
         for e in enemies:
-            if(distance(self.x, self.y, e.x, e.y) < 15):
+            bullet_center_x = self.x + self.img.get_width() / 2
+            bullet_center_y = self.y + self.img.get_height() / 2
+            enemy_center_x = e.x + e.size / 2
+            enemy_center_y = e.y + e.size / 2
+            if distance(bullet_center_x, bullet_center_y, enemy_center_x, enemy_center_y) < 15:
                 if self in bullets:  # 確保子彈仍然存在於列表中
                     bullets.remove(self)
                 e.Hurt()  # 減少敵人生命值
+                e.Death()  # 刪除敵人
+                score += 100
+                print(score)
 
  #保存現有子彈
-bullets = []
+bullets = [] # 保存player子彈
 
 # 生成子彈
 def showBullets():
@@ -162,6 +177,9 @@ def DrawUI():
             screen.blit(image, (x, y))
     screen.blit(imgStar, (512, 400))
 
+# 分數
+score = 0
+
 # 時鐘
 clock = pygame.time.Clock()
 
@@ -173,7 +191,7 @@ enemy01 = Enemy(imgEnemy01, gameWidth/2, 100, 5)
 
 while running:
     # 填充背景顏色
-    screen.fill((0, 0, 0))   
+    screen.blit(imgBackGround, (0,0))   
     
     # 處理事件
     for event in pygame.event.get():
