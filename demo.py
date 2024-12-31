@@ -53,82 +53,89 @@ class Enemy():
     # 受擊
     def Hurt(self):
         self.health -= 1
-    def Death(self):
+    # 死亡
+    def isDead(self):
         global score
         for e in enemies:
             if(self.health <= 0):
                 if self in enemies:
                     enemies.remove(self)
                     score += 500
-    # 射擊邏輯
-    def shoot(self):
-        if self.can_shoot:
-            angle_to_player = math.atan2(playerY - self.y, playerX - self.x)
-            enemy_bullets.append(EnemyBullet(self.x + self.size / 2, self.y + self.size / 2, angle_to_player))
-                
-# 新敵人類別
-class CircularShootingEnemy(Enemy):
+    # 發射子彈
+    def shoot(self, player_x, player_y):
+        
+        pass
+    # 移動或其他通用行為
+    def move(self):
+        """
+        移動或其他通用行為，可在這裡處理。
+        """
+        self.x += self.speed
+        # 出界判斷
+        if self.x > gameWidth + 2*self.size or self.x < -2*self.size:
+            self.speed *= -1
+
+# Enemy01(三方向)
+class Enemy01(Enemy):
+    def __init__(self, x, y, speed):
+        super().__init__(x, y, speed)
+        self.img = imgEnemy01
+        
+    def shoot(self, player_x, player_y):
+        current_time = pygame.time.get_ticks()
+        cooldown = 1000
+        # 如果沒設置 last_shoot_time，可以在 __init__ 初始化
+        if not hasattr(self, 'last_shoot_time'):
+            self.last_shoot_time = 0
+        if current_time - self.last_shoot_time > cooldown:
+            angle_to_player = math.atan2(player_y - self.y, player_x - self.x) # 計算與player之間的角度
+            for i in range(-1, 2):
+                bullet_angle = angle_to_player + math.radians(i * 10)
+                enemy_bullets.append(EnemyBullet(self.x + self.size / 2, self.y + self.size / 2, bullet_angle))
+                self.last_shoot_time = current_time
+    def move(self):
+        """
+        先呼叫父類別的 move()，再加上其它特殊邏輯 (如果有需要)。
+        """
+        super().move()
+            
+# Enemy02(圓形)
+class Enemy02(Enemy):
     def __init__(self, x, y, speed):
         super().__init__(x, y, speed)
         self.img = imgEnemy02
-        self.shoot_cooldown = 1000  # 子彈生成冷卻時間
+        self.shoot_cooldown = 1000 # 子彈生成冷卻時間
         self.last_shoot_time = 0
-        self.bullets = []  # 儲存圓形排列的子彈
 
-    def generate_circular_bullets(self):
+    def shoot(self, player_x, player_y):
         current_time = pygame.time.get_ticks()
         if current_time - self.last_shoot_time > self.shoot_cooldown:
-            radius = 40  # 子彈初始圓形排列的半徑
+            radius = 15  # 子彈初始圓形排列的半徑
             for i in range(8):  # 生成圓形排列的8個子彈
                 angle = math.radians(i * 45)  # 每個子彈相隔45度
-                initial_x = self.x + self.size / 2 + radius * math.cos(angle)
+                initial_x = self.x + self.size / 2 + radius * math.cos(angle) #計算初始位置
                 initial_y = self.y + self.size / 2 + radius * math.sin(angle)
-                self.bullets.append({
-                    "x": self.x + self.size / 2,
-                    "y": self.y + self.size / 2,
-                    "angle": angle
-                })
+                enemy_bullets.append(
+                    EnemyBulletCircular(initial_x, initial_y, angle)
+                )
             self.last_shoot_time = current_time
-
-    def update_bullets(self):
-        bullets_to_remove = []
-        for bullet in self.bullets:
-            # 子彈沿角度方向移動
-            bullet["x"] += 3 * math.cos(bullet["angle"])
-            bullet["y"] += 3 * math.sin(bullet["angle"])
-
-            # 繪製子彈
-            screen.blit(imgEnemyBullet02, (bullet["x"], bullet["y"]))
-
-            # 判斷子彈是否超出範圍
-            if bullet["x"] < 0 or bullet["x"] > gameWidth or bullet["y"] < 0 or bullet["y"] > HEIGHT:
-                bullets_to_remove.append(bullet)
-
-        # 移除需要刪除的子彈
-        for bullet in bullets_to_remove:
-            self.bullets.remove(bullet)
-
-# todo 敵人出現時間軸
-numbersOfEnemies = 1
-enemies = []
-for i in range(numbersOfEnemies):
-    enemies.append(Enemy(random.randint(100, 300), 100, 2))
-    enemies.append(CircularShootingEnemy(150, random.randint(100, 300), 1))  
-
+              
+    def move(self):
+        """
+        先呼叫父類別的 move()，再加上其它特殊邏輯 (如果有需要)。
+        """
+        super().move()
 
 # 生成Enemy
 def ShowEnemy():
-    global x, y, speed
+    global x, y
     for e in enemies:
+        # 移動並繪製敵人
+        e.move()
         screen.blit(e.img, (e.x, e.y))
-        e.x += e.speed
-        # 出界判斷
-        if e.x > gameWidth + 2*e.size or e.x < 0 - 2*e.size:
-            e.speed *= -1
-         # 如果是圓形射擊敵人，處理其特殊邏輯
-        if isinstance(e, CircularShootingEnemy):
-            e.generate_circular_bullets()
-            e.update_bullets()
+        # 呼叫每個敵人的 shoot()
+        e.shoot(playerX, playerY)
+
     
 # Bullet類
 class Bullet():
@@ -149,7 +156,7 @@ class Bullet():
                 if self in bullets:  # 確保子彈仍然存在於列表中
                     bullets.remove(self)
                 e.Hurt()  # 減少敵人生命值
-                e.Death()  # 刪除敵人
+                e.isDead()  # 刪除敵人
                 score += 100
                 print(score)
 
@@ -183,52 +190,67 @@ class EnemyBullet:
         self.x += self.speed * math.cos(self.angle)
         self.y += self.speed * math.sin(self.angle)
 
-    def draw(self):
+    def draw(self, screen):
         screen.blit(self.img, (self.x, self.y))
 
     def is_off_screen(self):
         return self.x < 0 or self.x > gameWidth or self.y < 0 or self.y > HEIGHT
 
+# 敵人圓形子彈類
+class EnemyBulletCircular:
+    def __init__(self, x, y, angle):
+        self.img = imgEnemyBullet02
+        self.x = x
+        self.y = y
+        self.speed = 2
+        self.angle = angle  # 移動角度
+        
+    def move(self):
+        self.x += self.speed * math.cos(self.angle)
+        self.y += self.speed * math.sin(self.angle)
+
+    def draw(self, screen):
+        screen.blit(self.img, (self.x, self.y))
+
+    def is_off_screen(self):
+        return (self.x < 0 or self.x > gameWidth or 
+                self.y < 0 or self.y > HEIGHT)
+        
+
+# todo 敵人出現時間軸
+numbersOfEnemies = 3
+enemies = []
+for i in range(numbersOfEnemies):
+    enemies.append(Enemy01(random.randint(100, 300), 100, 2))
+    enemies.append(Enemy02(150, random.randint(100, 300), 1))  
+
 # 保存敵機子彈
 enemy_bullets = []
 
-# 生成敵機子彈
-enemy_shoot_cooldown = 1000 
-last_enemy_shoot_time = 0
-
-def generate_enemy_bullets():
-    global last_enemy_shoot_time
-    current_time = pygame.time.get_ticks()
-    if current_time - last_enemy_shoot_time > enemy_shoot_cooldown:
-        for e in enemies:
-            angle_to_player = math.atan2(playerY - e.y, playerX - e.x)
-            for i in range(-1, 2):  # 生成3發子彈，角度略有不同
-                bullet_angle = angle_to_player + math.radians(i * 10)  # 每發子彈相差10度
-                enemy_bullets.append(EnemyBullet(e.x + e.size / 2, e.y + e.size / 2, bullet_angle))
-        last_enemy_shoot_time = current_time
-
-# 繪製與更新敵機子彈
+# 2. 更新全域管理的子彈
 def update_enemy_bullets():
     bullets_to_remove = []
     for bullet in enemy_bullets:
         bullet.move()
-        bullet.draw()
+        bullet.draw(screen)
         if bullet.is_off_screen():
             bullets_to_remove.append(bullet)
-        # 子彈與玩家碰撞邏輯
-        bullet_center_x = bullet.x + bullet.img.get_width() / 2
-        bullet_center_y = bullet.y + bullet.img.get_height() / 2
-        player_center_x = playerX + playerSize / 2
-        player_center_y = playerY + playerSize / 2
-        if distance(bullet_center_x, bullet_center_y, player_center_x, player_center_y) < 10:
-            # todo 玩家受傷邏輯
-            print("玩家受擊！")  
-            bullets_to_remove.append(bullet)
-
-    # 移除需要刪除的子彈
-    for bullet in bullets_to_remove: 
-        if bullet in enemy_bullets:
-            enemy_bullets.remove(bullet)
+        else:
+            # 偵測與玩家碰撞
+            bullet_center_x = bullet.x + bullet.img.get_width() / 2
+            bullet_center_y = bullet.y + bullet.img.get_height() / 2
+            player_center_x = playerX + playerSize / 2
+            player_center_y = playerY + playerSize / 2
+            if distance(bullet_center_x, bullet_center_y, player_center_x, player_center_y) < 10:
+                """
+                todo 玩家受傷邏輯
+                """
+                print('玩家受傷')
+                bullets_to_remove.append(bullet)
+    
+    for b in bullets_to_remove:
+        if b in enemy_bullets:
+            enemy_bullets.remove(b)
 
 
 # 設定射擊間隔和追蹤上次射擊時間
@@ -312,17 +334,14 @@ while running:
 
     #玩家圖像
     screen.blit(imgPlayer, (playerX, playerY))
+    ShowEnemy()  
+    update_enemy_bullets()  
     PlayerEvents()
-    ShowEnemy()
     showBullets()
-    generate_enemy_bullets()
-    update_enemy_bullets()
     
     
     DrawUI()
+    pygame.display.update()  # 更新顯示
+    clock.tick(60)  # 控制遊戲速度
     
-    # 更新顯示
-    pygame.display.update()
-    
-    # 控制遊戲速度
-    clock.tick(60)
+pygame.quit()
