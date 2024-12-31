@@ -28,8 +28,10 @@ imgPlayer = pygame.image.load('Asset/player.png')
 imgLauncher = pygame.image.load('Asset/launcher.png')
 imgPlayerBullet01 = pygame.image.load('Asset/player_bullet_1.png')
 imgEnemy01 = pygame.image.load('Asset/enemy_01.png')
+imgEnemy02 = pygame.image.load('Asset/enemy_02.png')
 imgEnemyBullet01 = pygame.image.load('Asset/enemy_bullet_1.png')
 imgEnemyBullet02 = pygame.image.load('Asset/enemy_bullet_2.png')
+imgEnemyBullet03 = pygame.image.load('Asset/enemy_bullet_3.png')
 
 # 添加音效 todo
 
@@ -41,9 +43,9 @@ playerSpeed = 5
 
 # Enemy類
 class Enemy():
-    def __init__(self, img, x, y, speed):
+    def __init__(self, x, y, speed):
         self.health = 3
-        self.img = img
+        self.img = imgEnemy01
         self.size = 32
         self.x = x
         self.y = y
@@ -58,12 +60,61 @@ class Enemy():
                 if self in enemies:
                     enemies.remove(self)
                     score += 500
+    # 射擊邏輯
+    def shoot(self):
+        if self.can_shoot:
+            angle_to_player = math.atan2(playerY - self.y, playerX - self.x)
+            enemy_bullets.append(EnemyBullet(self.x + self.size / 2, self.y + self.size / 2, angle_to_player))
                 
-# todo 敵人出現時間
-numbersOfEnemies = 5
+# 新敵人類別
+class CircularShootingEnemy(Enemy):
+    def __init__(self, x, y, speed):
+        super().__init__(x, y, speed)
+        self.img = imgEnemy02
+        self.shoot_cooldown = 1000  # 子彈生成冷卻時間
+        self.last_shoot_time = 0
+        self.bullets = []  # 儲存圓形排列的子彈
+
+    def generate_circular_bullets(self):
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_shoot_time > self.shoot_cooldown:
+            radius = 40  # 子彈初始圓形排列的半徑
+            for i in range(8):  # 生成圓形排列的8個子彈
+                angle = math.radians(i * 45)  # 每個子彈相隔45度
+                initial_x = self.x + self.size / 2 + radius * math.cos(angle)
+                initial_y = self.y + self.size / 2 + radius * math.sin(angle)
+                self.bullets.append({
+                    "x": self.x + self.size / 2,
+                    "y": self.y + self.size / 2,
+                    "angle": angle
+                })
+            self.last_shoot_time = current_time
+
+    def update_bullets(self):
+        bullets_to_remove = []
+        for bullet in self.bullets:
+            # 子彈沿角度方向移動
+            bullet["x"] += 3 * math.cos(bullet["angle"])
+            bullet["y"] += 3 * math.sin(bullet["angle"])
+
+            # 繪製子彈
+            screen.blit(imgEnemyBullet02, (bullet["x"], bullet["y"]))
+
+            # 判斷子彈是否超出範圍
+            if bullet["x"] < 0 or bullet["x"] > gameWidth or bullet["y"] < 0 or bullet["y"] > HEIGHT:
+                bullets_to_remove.append(bullet)
+
+        # 移除需要刪除的子彈
+        for bullet in bullets_to_remove:
+            self.bullets.remove(bullet)
+
+# todo 敵人出現時間軸
+numbersOfEnemies = 1
 enemies = []
 for i in range(numbersOfEnemies):
-    enemies.append(Enemy(imgEnemy01, random.randint(100, 300), 100, 2))
+    enemies.append(Enemy(random.randint(100, 300), 100, 2))
+    enemies.append(CircularShootingEnemy(150, random.randint(100, 300), 1))  
+
 
 # 生成Enemy
 def ShowEnemy():
@@ -74,7 +125,10 @@ def ShowEnemy():
         # 出界判斷
         if e.x > gameWidth + 2*e.size or e.x < 0 - 2*e.size:
             e.speed *= -1
-            # todo 刪除自身
+         # 如果是圓形射擊敵人，處理其特殊邏輯
+        if isinstance(e, CircularShootingEnemy):
+            e.generate_circular_bullets()
+            e.update_bullets()
     
 # Bullet類
 class Bullet():
@@ -246,9 +300,6 @@ clock = pygame.time.Clock()
 
 # 遊戲主迴圈
 running = True
-
-# 初始化enemy
-enemy01 = Enemy(imgEnemy01, gameWidth/2, 100, 5)
 
 while running:
     # 填充背景顏色
