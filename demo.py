@@ -57,10 +57,16 @@ enemies = []            # 保存敵人
 bullets = []            # 保存player子彈
 enemy_bullets = []      # 保存敵機子彈
 explosions = []         # 保存爆炸特效
+bomb_effects = []       # 保存炸彈特效
 
 # 設定射擊間隔和追蹤上次射擊時間
 shootCooldown = 200
 lastShootTime = 0  # 初始化為0
+
+# 炸彈數量
+bomb_count = 3
+
+bombIsPress = False
 
 score = 0 # 分數
 
@@ -312,6 +318,14 @@ class Explosion:
         current_image = self.images[self.index]
         screen.blit(current_image, (self.x, self.y))
 
+# 生成敵人
+def spawn_enemy(enemy_type, x, y, speed):
+    if enemy_type == "Enemy01":
+        return Enemy01(x, y, speed)
+    if enemy_type == "Enemy02":
+        return Enemy02(x, y, speed)
+    # ...有其他敵人類型也添加在此
+
 # 根據波次生成敵人。
 def spawn_enemies_by_wave():
     # 取得目前遊戲運行時間
@@ -322,11 +336,7 @@ def spawn_enemies_by_wave():
         if current_time >= wave["time"] and not wave["triggered"]:
             # 生成敵人
             for enemy_info in wave["enemies"]:
-                if enemy_info["type"] == "Enemy01":
-                    enemies.append(Enemy01(enemy_info["x"], enemy_info["y"], enemy_info["speed"]))
-                if enemy_info["type"] == "Enemy02":
-                    enemies.append(Enemy02(enemy_info["x"], enemy_info["y"], enemy_info["speed"]))
-                # ...有其他敵人類型也添加在此
+                enemies.append(spawn_enemy(enemy_info["type"], enemy_info["x"], enemy_info["y"], enemy_info["speed"]))
             # 更改"triggered"標籤，避免重複觸發
             wave["triggered"] = True
 
@@ -345,6 +355,8 @@ def update_enemy_bullets():
             player_center_x = playerX + playerSize / 2
             player_center_y = playerY + playerSize / 2
             if distance(bullet_center_x, bullet_center_y, player_center_x, player_center_y) < 10:
+                # todo 玩家受傷邏輯
+                print('玩家受傷')
                 explosions.append(
                     Explosion(
                         bullet_center_x - explosion_images[0].get_width() / 2,
@@ -352,10 +364,6 @@ def update_enemy_bullets():
                         isDead_images
                     )
                 )
-                """
-                todo 玩家受傷邏輯
-                """
-                print('玩家受傷')
                 bullets_to_remove.append(bullet)
     
     for b in bullets_to_remove:
@@ -378,7 +386,7 @@ def update_explosion():
     
 # Player事件處理
 def PlayerEvents():
-    global playerX, playerY, lastShootTime  # 宣告全域變數
+    global playerX, playerY, lastShootTime, bomb_count, bombIsPress  # 宣告全域變數
     # 玩家移動
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT] and playerX > 0:
@@ -389,12 +397,26 @@ def PlayerEvents():
         playerY -= playerSpeed
     if keys[pygame.K_DOWN] and playerY < HEIGHT - playerSize:
         playerY += playerSpeed
-    #玩家射擊 
+    # 玩家射擊 
     if keys[pygame.K_LSHIFT]:
-        currentTime = pygame.time.get_ticks()   # 獲取當前時間
-        if currentTime - lastShootTime > shootCooldown:  # 比較時間差
+        currentTime = pygame.time.get_ticks()               # 獲取當前時間
+        if currentTime - lastShootTime > shootCooldown:     # 比較時間差
             bullets.append(Bullet())
-            lastShootTime = currentTime  # 更新上次射擊時間
+            lastShootTime = currentTime                     # 更新上次射擊時間
+    # 使用bomb
+    if event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_LCTRL and bomb_count > 0 and bombIsPress == False:
+            enemy_bullets.clear()                           # 清空敵方子彈
+            bomb_count -= 1
+            # todo 炸彈特效
+            # bomb_effects.append((Explosion(playerX, playerY, explosion_images)))  
+            bombIsPress = True
+            
+            
+    if event.type == pygame.KEYUP:
+        if event.key == pygame.K_LCTRL:
+            bombIsPress = False
+                    
 
 # 距離判定(歐氏距離)
 def distance(x1, y1, x2, y2):
@@ -437,8 +459,12 @@ def DrawUI():
             x = top_left[0] + col * block_size
             y = top_left[1] + row * block_size
             screen.blit(image, (x, y))
-    screen.blit(imgStar, (top_left[0] + 2*block_size, top_left[1] + 12*block_size))
-    ShowScore(top_left[0] + 2*block_size, top_left[1] + 3*block_size)
+    screen.blit(imgStar, (top_left[0] + 2*block_size, top_left[1] + 12*block_size))  # 繪製圖片
+    ShowScore(top_left[0] + 2*block_size, top_left[1] + 3*block_size)                # 繪製分數
+    
+    bomb_text = f'Bomb : {bomb_count}'
+    bomb_render = font.render(bomb_text, True, (255, 255, 255))
+    screen.blit(bomb_render, (top_left[0] + 2*block_size, top_left[1] + 4*block_size))
 
 # 遊戲主迴圈
 running = True
