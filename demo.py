@@ -29,10 +29,10 @@ ui_images = [
 ]
 
 # 加載特效動畫
-explosion_image = [
+explosion_images = [
     pygame.image.load(f'Asset/effects/explosion_{i}.png') for i in range(4)
 ]
-isDead_image = [
+isDead_images = [
     pygame.image.load(f'Asset/effects/isDead_{i}.png') for i in range(4)
 ]
 
@@ -50,8 +50,9 @@ imgEnemyBullet03 = pygame.image.load('Asset/enemy_bullet_3.png')
 
 # 添加音效 todo
 
-bullets = [] # 保存player子彈
-enemy_bullets = [] # 保存敵機子彈
+bullets = []            # 保存player子彈
+enemy_bullets = []      # 保存敵機子彈
+explosions = []         # 保存爆炸特效
 
 # 設定射擊間隔和追蹤上次射擊時間
 shootCooldown = 200
@@ -85,6 +86,14 @@ class Enemy():
                 if self in enemies:
                     enemies.remove(self)
                     score += 500
+                explosions.append(
+                    Explosion(
+                        self.x + self.img.get_width() / 2,
+                        self.y + self.img.get_height() / 2,
+                        isDead_images
+                        )
+                    )
+
     # 發射子彈
     def shoot(self, player_x, player_y):
         
@@ -178,7 +187,15 @@ class Bullet():
                 e.Hurt()  # 減少敵人生命值
                 e.isDead()  # 刪除敵人
                 score += 100
-                print(score)
+                # 添加爆炸特效
+                explosions.append(
+                    Explosion(
+                        bullet_center_x - explosion_images[0].get_width() / 2,
+                        bullet_center_y - explosion_images[0].get_height() / 2,
+                        explosion_images
+                    )
+                )
+                
 
  #保存現有子彈
 
@@ -234,7 +251,33 @@ class EnemyBulletCircular:
     def is_off_screen(self):
         return (self.x < 0 or self.x > gameWidth or 
                 self.y < 0 or self.y > HEIGHT)
+
+# 爆炸動畫
+class Explosion:
+    def __init__(self, x, y, images):
+        self.x = x
+        self.y = y
+        self.images = images                # 一系列爆炸圖片
+        self.index = 0                      # 從第 0 幀開始
+        self.max_index = len(images) - 1    
+        self.frame_duration = 5             # 每張圖片維持幾次主迴圈
+        self.frame_count = 0                # 控制換圖速度
         
+    # 更新爆炸特效的幀數（換圖邏輯）。
+    # 回傳值: 若特效已經播放完畢，則回傳 True 代表可以銷毀
+    def update(self):
+        self.frame_count += 1
+        if self.frame_count >= self.frame_duration:
+            self.frame_count = 0
+            self.index += 1
+            if self.index > self.max_index:
+                return True                 # 動畫結束 可銷毀
+            return False                    # 動畫尚未結束
+    
+    # 將爆炸特效繪製到遊戲視窗上
+    def draw(self, screen):
+        current_image = self.images[self.index]
+        screen.blit(current_image, (self.x, self.y))
 
 # todo 敵人出現時間軸
 numbersOfEnemies = 3
@@ -243,7 +286,7 @@ for i in range(numbersOfEnemies):
     enemies.append(Enemy01(random.randint(100, 300), 100, 2))
     enemies.append(Enemy02(150, random.randint(100, 300), 1))  
 
-# 2. 更新全域管理的子彈
+# 更新全域管理的子彈
 def update_enemy_bullets():
     bullets_to_remove = []
     for bullet in enemy_bullets:
@@ -258,6 +301,13 @@ def update_enemy_bullets():
             player_center_x = playerX + playerSize / 2
             player_center_y = playerY + playerSize / 2
             if distance(bullet_center_x, bullet_center_y, player_center_x, player_center_y) < 10:
+                explosions.append(
+                    Explosion(
+                        bullet_center_x - explosion_images[0].get_width() / 2,
+                        bullet_center_y - explosion_images[0].get_height() / 2,
+                        isDead_images
+                    )
+                )
                 """
                 todo 玩家受傷邏輯
                 """
@@ -267,6 +317,21 @@ def update_enemy_bullets():
     for b in bullets_to_remove:
         if b in enemy_bullets:
             enemy_bullets.remove(b)
+
+# 更新並繪製爆炸特效
+def update_explosion():
+    explosion_to_remove = []
+    for exp in explosions:
+        # 若收到回傳值 True 則移除特效
+        if exp.update():
+            explosion_to_remove.append(exp)
+        else:
+            exp.draw(screen)
+    # 移除特效
+    for exp in explosion_to_remove:
+        if exp in explosions:
+            explosions.remove(exp)
+    
 
 # Player事件處理
 def PlayerEvents():
@@ -347,7 +412,8 @@ while running:
     #玩家圖像
     screen.blit(imgPlayer, (playerX, playerY))
     ShowEnemy()  
-    update_enemy_bullets()  
+    update_enemy_bullets()
+    update_explosion()  
     PlayerEvents()
     showBullets()
     
