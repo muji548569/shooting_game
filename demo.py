@@ -11,8 +11,7 @@ gameWidth = 448
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("彈幕射擊遊戲")
 
-# 分數
-score = 0
+# 字形
 font = pygame.font.Font('Asset/fonts/m6x11.ttf', 32)
 
 # 時鐘
@@ -28,6 +27,15 @@ rows = 20     # 方框的高度包含 20 個方塊
 ui_images = [
     pygame.image.load(f'Asset/BG/UI_{i}.png') for i in range(9)
 ]
+
+# 加載特效動畫
+explosion_image = [
+    pygame.image.load(f'Asset/effects/explosion_{i}.png') for i in range(4)
+]
+isDead_image = [
+    pygame.image.load(f'Asset/effects/isDead_{i}.png') for i in range(4)
+]
+
 # 加載圖片
 imgBackGround = pygame.image.load('Asset/BG/space.png')
 imgStar = pygame.image.load('Asset/Star.png')
@@ -41,6 +49,15 @@ imgEnemyBullet02 = pygame.image.load('Asset/enemy_bullet_2.png')
 imgEnemyBullet03 = pygame.image.load('Asset/enemy_bullet_3.png')
 
 # 添加音效 todo
+
+bullets = [] # 保存player子彈
+enemy_bullets = [] # 保存敵機子彈
+
+# 設定射擊間隔和追蹤上次射擊時間
+shootCooldown = 200
+lastShootTime = 0  # 初始化為0
+
+score = 0 # 分數
 
 # Player
 playerSize = 32
@@ -74,14 +91,11 @@ class Enemy():
         pass
     # 移動或其他通用行為
     def move(self):
-        """
-        移動或其他通用行為，可在這裡處理。
-        """
         self.x += self.speed
         # 出界判斷
         if self.x > gameWidth + 2*self.size or self.x < -2*self.size:
             self.speed *= -1
-
+            
 # Enemy01(三方向)
 class Enemy01(Enemy):
     def __init__(self, x, y, speed):
@@ -143,7 +157,6 @@ def ShowEnemy():
         # 呼叫每個敵人的 shoot()
         e.shoot(playerX, playerY)
 
-    
 # Bullet類
 class Bullet():
     def __init__(self):
@@ -168,7 +181,6 @@ class Bullet():
                 print(score)
 
  #保存現有子彈
-bullets = [] # 保存player子彈
 
 # 生成子彈
 def showBullets():
@@ -231,9 +243,6 @@ for i in range(numbersOfEnemies):
     enemies.append(Enemy01(random.randint(100, 300), 100, 2))
     enemies.append(Enemy02(150, random.randint(100, 300), 1))  
 
-# 保存敵機子彈
-enemy_bullets = []
-
 # 2. 更新全域管理的子彈
 def update_enemy_bullets():
     bullets_to_remove = []
@@ -258,11 +267,6 @@ def update_enemy_bullets():
     for b in bullets_to_remove:
         if b in enemy_bullets:
             enemy_bullets.remove(b)
-
-
-# 設定射擊間隔和追蹤上次射擊時間
-shootCooldown = 200
-lastShootTime = 0  # 初始化為0
 
 # Player事件處理
 def PlayerEvents():
