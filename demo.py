@@ -411,7 +411,7 @@ def draw_player():
         current_time = pygame.time.get_ticks()
         if current_time - lastInvincibleTime >= invincibleDuration:
             isInvincible = False
-    # 無敵時間player閃爍
+    # 無敵時間 player 閃爍
     if isInvincible:
         # 每0.2秒切換次顯示 or 不顯示
         if((pygame.time.get_ticks() // 200)% 2) == 0:
@@ -499,9 +499,23 @@ def DrawUI():
     screen.blit(imgStar, (top_left[0] + 2*block_size, top_left[1] + 12*block_size))  # 繪製圖片
     ShowScore(top_left[0] + 2*block_size, top_left[1] + 3*block_size)                # 繪製分數
     
-    bomb_text = f'Bomb : {bomb_count}'
-    bomb_render = font.render(bomb_text, True, (255, 255, 255))
-    screen.blit(bomb_render, (top_left[0] + 2*block_size, top_left[1] + 4*block_size))
+    # 繪製殘機
+    life_text = font.render(f'Life : ',True ,(255, 255, 255))
+    screen.blit(life_text, (top_left[0] + 2*block_size, top_left[1] + 4.5*block_size))  
+    
+    for i in range(playerLives):
+        x = top_left[0] + 2*block_size + 70 + i * 48
+        y = top_left[1] + 4.5*block_size - 4
+        screen.blit(imgPlayer, (x, y))
+    
+    # 繪製剩餘炸彈
+    bomb_text = font.render(f'Bomb : ',True ,(255, 255, 255))
+    screen.blit(bomb_text, (top_left[0] + 2*block_size, top_left[1] + 6*block_size))
+    
+    for i in range(bomb_count):
+        x = top_left[0] + 2*block_size + 80 + i * 32
+        y = top_left[1] + 6*block_size - 4
+        screen.blit(imgBomb, (x, y))
 
 # 遊戲主迴圈
 running = True
