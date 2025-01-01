@@ -54,7 +54,7 @@ imgEnemyBullet04 = pygame.image.load('Asset/enemy_bullet_4.png')
 imgBomb = pygame.image.load('Asset/bomb.png')
 imgSmoke = pygame.image.load('Asset/effects/smoke_0.png')
 
-# 添加音效 todo
+# TODO: 添加音效
 
 enemies = []            # 保存敵人
 bullets = []            # 保存player子彈
@@ -78,6 +78,10 @@ playerSize = 32
 playerX = gameWidth // 2
 playerY = HEIGHT - 50
 playerSpeed = 5
+playerLives = 3          
+isInvincible = False        # 是否處於無敵狀態
+invincibleDuration = 2000   # 無敵時間
+lastInvincibleTime = 0      # 紀錄開始無敵的時間點
 
 # 波次
 waves = [
@@ -345,6 +349,7 @@ def spawn_enemies_by_wave():
 
 # 更新全域管理的子彈
 def update_enemy_bullets():
+    global isInvincible, playerLives, lastInvincibleTime
     bullets_to_remove = []
     for bullet in enemy_bullets:
         bullet.move()
@@ -358,8 +363,19 @@ def update_enemy_bullets():
             player_center_x = playerX + playerSize / 2
             player_center_y = playerY + playerSize / 2
             if distance(bullet_center_x, bullet_center_y, player_center_x, player_center_y) < 8:
-                # todo 玩家死亡邏輯
-                print('玩家受傷')
+                if not isInvincible:    # 若不在無敵時間
+                    playerLives -= 1
+                    print(f'玩家受擊，剩{playerLives}次機會')
+                    
+                    # 進入無敵
+                    isInvincible = True
+                    lastInvincibleTime = pygame.time.get_ticks()
+                    
+                    # 檢測是否已死亡
+                    if playerLives <= 0:
+                        print("GAME OVER!")
+                        # TODO: Game Over邏輯
+                
                 explosions.append(
                     Explosion(
                         bullet_center_x - explosion_images[0].get_width() / 2,
@@ -387,6 +403,25 @@ def update_explosion():
         if exp in explosions:
             explosions.remove(exp)
     
+# 繪製player
+def draw_player():
+    global isInvincible
+    #檢查是否過了無敵時間
+    if isInvincible:
+        current_time = pygame.time.get_ticks()
+        if current_time - lastInvincibleTime >= invincibleDuration:
+            isInvincible = False
+    # 無敵時間player閃爍
+    if isInvincible:
+        # 每0.2秒切換次顯示 or 不顯示
+        if((pygame.time.get_ticks() // 200)% 2) == 0:
+            screen.blit(imgPlayer, (playerX, playerY)) 
+        else:
+            pass
+    # 非無敵時間正常顯示
+    else:
+        screen.blit(imgPlayer, (playerX, playerY))
+        
 # Player事件處理
 def PlayerEvents():
     global playerX, playerY, lastShootTime, bomb_count, bombIsPress  # 宣告全域變數
@@ -411,7 +446,7 @@ def PlayerEvents():
         if event.key == pygame.K_LCTRL and bomb_count > 0 and bombIsPress == False:
             enemy_bullets.clear()                           # 清空敵方子彈
             bomb_count -= 1
-            # todo 炸彈特效
+            # TODO: 炸彈特效
             # bomb_effects.append((Explosion(playerX, playerY, explosion_images)))  
             bombIsPress = True
             
@@ -420,7 +455,6 @@ def PlayerEvents():
         if event.key == pygame.K_LCTRL:
             bombIsPress = False
                     
-
 # 距離判定(歐氏距離)
 def distance(x1, y1, x2, y2):
     a = x1 - x2
@@ -482,7 +516,7 @@ while running:
             running = False
 
     #玩家圖像
-    screen.blit(imgPlayer, (playerX, playerY))
+    draw_player()
     ShowEnemy()  
     update_enemy_bullets()
     update_explosion()  
