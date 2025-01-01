@@ -11,6 +11,13 @@ gameWidth = 448
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("彈幕射擊遊戲")
 
+# 分數
+score = 0
+font = pygame.font.Font('Asset/fonts/m6x11.ttf', 32)
+
+# 時鐘
+clock = pygame.time.Clock()
+
 # 方框區域設定
 top_left = (gameWidth, 0)
 block_size = 32  # 假設每個方塊的大小是 32x32
@@ -283,6 +290,12 @@ def distance(x1, y1, x2, y2):
     b = y1 - y2
     return math.sqrt(a*a + b*b) #開根號
 
+# 顯示分數
+def ShowScore(x, y):
+    text = f"Score :  {score}"
+    score_render = font.render(text, True, (255, 255, 255))
+    screen.blit(score_render, (x, y))
+
 # 繪製右側UI框
 def DrawUI():
     # 繪製方框
@@ -312,13 +325,8 @@ def DrawUI():
             x = top_left[0] + col * block_size
             y = top_left[1] + row * block_size
             screen.blit(image, (x, y))
-    screen.blit(imgStar, (512, 400))
-
-# 分數
-score = 0
-
-# 時鐘
-clock = pygame.time.Clock()
+    screen.blit(imgStar, (top_left[0] + 2*block_size, top_left[1] + 12*block_size))
+    ShowScore(top_left[0] + 2*block_size, top_left[1] + 3*block_size)
 
 # 遊戲主迴圈
 running = True
