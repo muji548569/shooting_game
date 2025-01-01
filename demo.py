@@ -50,6 +50,9 @@ imgEnemy02 = pygame.image.load('Asset/enemy_02.png')
 imgEnemyBullet01 = pygame.image.load('Asset/enemy_bullet_1.png')
 imgEnemyBullet02 = pygame.image.load('Asset/enemy_bullet_2.png')
 imgEnemyBullet03 = pygame.image.load('Asset/enemy_bullet_3.png')
+imgEnemyBullet04 = pygame.image.load('Asset/enemy_bullet_4.png')
+imgBomb = pygame.image.load('Asset/bomb.png')
+imgSmoke = pygame.image.load('Asset/effects/smoke_0.png')
 
 # 添加音效 todo
 
@@ -65,7 +68,7 @@ lastShootTime = 0  # 初始化為0
 
 # 炸彈數量
 bomb_count = 3
-
+# 炸彈鍵被按下
 bombIsPress = False
 
 score = 0 # 分數
@@ -354,8 +357,8 @@ def update_enemy_bullets():
             bullet_center_y = bullet.y + bullet.img.get_height() / 2
             player_center_x = playerX + playerSize / 2
             player_center_y = playerY + playerSize / 2
-            if distance(bullet_center_x, bullet_center_y, player_center_x, player_center_y) < 10:
-                # todo 玩家受傷邏輯
+            if distance(bullet_center_x, bullet_center_y, player_center_x, player_center_y) < 8:
+                # todo 玩家死亡邏輯
                 print('玩家受傷')
                 explosions.append(
                     Explosion(
