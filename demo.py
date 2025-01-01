@@ -17,6 +17,9 @@ font = pygame.font.Font('Asset/fonts/m6x11.ttf', 32)
 # 時鐘
 clock = pygame.time.Clock()
 
+# 記錄遊戲開始時間 (可選)
+game_start_time = pygame.time.get_ticks()
+
 # 方框區域設定
 top_left = (gameWidth, 0)
 block_size = 32  # 假設每個方塊的大小是 32x32
@@ -50,6 +53,7 @@ imgEnemyBullet03 = pygame.image.load('Asset/enemy_bullet_3.png')
 
 # 添加音效 todo
 
+enemies = []            # 保存敵人
 bullets = []            # 保存player子彈
 enemy_bullets = []      # 保存敵機子彈
 explosions = []         # 保存爆炸特效
@@ -65,6 +69,34 @@ playerSize = 32
 playerX = gameWidth // 2
 playerY = HEIGHT - 50
 playerSpeed = 5
+
+# 波次
+waves = [
+    {
+        "time": 2000,
+        "enemies": [
+            {"type": "Enemy01", "x": 50, "y": 50, "speed": 2},
+            {"type": "Enemy01", "x": 100, "y": 50, "speed": 2},
+            {"type": "Enemy01", "x": 150, "y": 50, "speed": 2},
+            {"type": "Enemy01", "x": gameWidth - 50, "y": 100, "speed": -2},
+            {"type": "Enemy01", "x": gameWidth - 100,"y": 100, "speed": -2},
+            {"type": "Enemy01", "x": gameWidth - 150,"y": 100, "speed": -2}
+        ],
+        "triggered": False
+    },
+    {
+        "time": 10000,
+        "enemies": [
+            {"type": "Enemy02", "x": 50, "y": 50, "speed": 2},
+            {"type": "Enemy02", "x": 100, "y": 50, "speed": 2},
+            {"type": "Enemy02", "x": 150, "y": 50, "speed": 2},
+            {"type": "Enemy02", "x": gameWidth - 50, "y": 100, "speed": -2},
+            {"type": "Enemy02", "x": gameWidth - 100,"y": 100, "speed": -2},
+            {"type": "Enemy02", "x": gameWidth - 150,"y": 100, "speed": -2}
+        ],
+        "triggered": False
+    }
+]
 
 # Enemy類
 class Enemy():
@@ -133,6 +165,7 @@ class Enemy01(Enemy):
 class Enemy02(Enemy):
     def __init__(self, x, y, speed):
         super().__init__(x, y, speed)
+        self.health = 5
         self.img = imgEnemy02
         self.shoot_cooldown = 1000 # 子彈生成冷卻時間
         self.last_shoot_time = 0
@@ -279,12 +312,23 @@ class Explosion:
         current_image = self.images[self.index]
         screen.blit(current_image, (self.x, self.y))
 
-# todo 敵人出現時間軸
-numbersOfEnemies = 3
-enemies = []
-for i in range(numbersOfEnemies):
-    enemies.append(Enemy01(random.randint(100, 300), 100, 2))
-    enemies.append(Enemy02(150, random.randint(100, 300), 1))  
+# 根據波次生成敵人。
+def spawn_enemies_by_wave():
+    # 取得目前遊戲運行時間
+    current_time = pygame.time.get_ticks()
+    # 檢查波次
+    for wave in waves:
+        # 如果目前時間已超過 wave["time"] 還未觸發
+        if current_time >= wave["time"] and not wave["triggered"]:
+            # 生成敵人
+            for enemy_info in wave["enemies"]:
+                if enemy_info["type"] == "Enemy01":
+                    enemies.append(Enemy01(enemy_info["x"], enemy_info["y"], enemy_info["speed"]))
+                if enemy_info["type"] == "Enemy02":
+                    enemies.append(Enemy02(enemy_info["x"], enemy_info["y"], enemy_info["speed"]))
+                # ...有其他敵人類型也添加在此
+            # 更改"triggered"標籤，避免重複觸發
+            wave["triggered"] = True
 
 # 更新全域管理的子彈
 def update_enemy_bullets():
@@ -332,7 +376,6 @@ def update_explosion():
         if exp in explosions:
             explosions.remove(exp)
     
-
 # Player事件處理
 def PlayerEvents():
     global playerX, playerY, lastShootTime  # 宣告全域變數
@@ -416,8 +459,8 @@ while running:
     update_explosion()  
     PlayerEvents()
     showBullets()
-    
-    
+    spawn_enemies_by_wave()
+
     DrawUI()
     pygame.display.update()  # 更新顯示
     clock.tick(60)  # 控制遊戲速度
