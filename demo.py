@@ -1,6 +1,7 @@
 import pygame
 import random
 import math
+import enum
 
 # 初始化 pygame
 pygame.init()
@@ -12,7 +13,8 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("彈幕射擊遊戲")
 
 # 字形
-font = pygame.font.Font('Asset/fonts/m6x11.ttf', 32)
+font32 = pygame.font.Font('Asset/fonts/m6x11.ttf', 32)
+font48 = pygame.font.Font('Asset/fonts/m6x11.ttf', 48)
 
 # 方框區域設定
 top_left = (gameWidth, 0)
@@ -58,6 +60,12 @@ bomb_effects = []       # 保存炸彈特效
 
 score = 0 # 分數
 
+# 遊戲狀態
+GAME_START = 0
+GAME_PLAY = 1
+GAME_WIN = 2
+GAME_OVER = 3
+
 # Player
 playerSize = 32
 playerX = gameWidth // 2
@@ -76,6 +84,9 @@ lastShootTime = 0  # 初始化為0
 bomb_count = 3
 # 炸彈鍵被按下
 bombIsPress = False
+
+# boss死亡
+boss_is_defeated = False
 
 # 時鐘
 clock = pygame.time.Clock()
@@ -126,6 +137,73 @@ waves = [
         "triggered": False
     }
 ]
+
+# 繪製初始場景
+def draw_start_scene(screen):
+    screen.fill((0, 0, 0))
+    title_text = font48.render("SHOOTING GAME", True, (255, 255, 255))
+    info_text = font32.render("Press any button", True, (255, 255, 255))
+    screen.blit(title_text, (100, 100))
+    screen.blit(info_text, (100, 200))
+    # TODO: 裝飾or圖片
+
+# 事件處理(初始)
+def handle_start_scene_events(current_state):
+    # 取得事件
+    for event in pygame.event.get():
+        # 離開遊戲
+        if event.type == pygame.QUIT:
+            return None, False          # (state, running=False)
+        # 按下任何鍵開始遊戲
+        if event.type == pygame.KEYDOWN:
+            # 切到 PLAY 狀態
+            return GAME_PLAY, True
+    # 如果沒切換場景，就維持當前狀態、running=True
+    return current_state, True 
+
+# 繪製勝利場景
+def draw_win_scene(screen, final_score):
+    # 顯示分數
+    screen.fill((0, 0, 0))
+    win_text = font48.render("Congratulations!!!", True, (255, 255, 0))
+    score_text = font32.render(f"Final Score: {final_score}", True, (255, 255, 255))
+    info_text = font32.render("Press any button to restart game", True, (255, 255, 255))
+    screen.blit(win_text, (100, 100))
+    screen.blit(score_text, (100, 200))
+    screen.blit(info_text, (100, 500))
+    
+# 事件處理(勝利)
+def handle_win_scene_events(current_state):
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            return None, False  # 直接退出
+        if event.type == pygame.KEYDOWN:
+            # 重新開始遊戲
+            reset_game() # 重置遊戲狀態
+            return GAME_START, True
+    return current_state, True
+
+# 繪製失敗場景
+def draw_game_over_scene(screen, final_score):
+    screen.fill((0, 0, 0))
+    over_text = font48.render("GAME OVER", True, (255, 0, 0))
+    score_text = font32.render(f"Final Score: {final_score}", True, (255, 255, 255))
+    info_text = font32.render("Press any button to restart game", True, (255, 255, 255))
+    screen.blit(over_text, (100, 100))
+    screen.blit(score_text, (100, 200))
+    screen.blit(info_text, (100, 500))
+    # 顯示重新開始或退出提示
+
+# 事件處理(失敗)
+def handle_game_over_scene_events(current_state):
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            return None, False
+        if event.type == pygame.KEYDOWN:
+            # 重新開始遊戲
+            reset_game() # 重置遊戲狀態
+            return GAME_START, True
+    return current_state, True
 
 # Enemy類
 class Enemy:
@@ -269,8 +347,7 @@ class Boss(Enemy):
                         bullet_angle = angle_i + math.radians(j * 5)
                         enemy_bullets.append(
                             EnemyBullet(center_x, center_y, bullet_angle)
-                        )
-                        
+                        )       
             else:
                 # === 第二階段：圓形彈 or 瘋狂散射 ===
                 self.shoot_cooldown = 100
@@ -281,22 +358,23 @@ class Boss(Enemy):
                     enemy_bullets.append(
                         EnemyBulletCircular(center_x, center_y, angle_1)
                     )
-
-    
-    
+    # 複寫isDead()
     def isDead(self):
-        global score
+        global score, boss_is_defeated
         if self.health <= 0:
             if self in enemies:
                 enemies.remove(self)
                 score += 5000       # Boss 被擊破加更多分
-            explosions.append(
-                Explosion(
-                    self.x + self.img.get_width() / 2,
-                    self.y + self.img.get_height() / 2,
-                    isDead_images
+                enemy_bullets.clear()
+            for i in range(100):
+                explosions.append(
+                    Explosion(
+                        self.x + self.img.get_width() / 2 + random.randint(-128, 128),
+                        self.y + self.img.get_height() / 2 + random.randint(-128, 128),
+                        isDead_images
+                    )
                 )
-            )
+            boss_is_defeated = True
         
 # 移動策略 抽象類 (介面)
 class MovementStrategy:
@@ -622,6 +700,7 @@ def PlayerEvents():
         if currentTime - lastShootTime > shootCooldown:     # 比較時間差
             bullets.append(Bullet())
             lastShootTime = currentTime                     # 更新上次射擊時間
+    """
     # 使用bomb
     if event.type == pygame.KEYDOWN:
         if event.key == pygame.K_LCTRL and bomb_count > 0 and not bombIsPress:
@@ -635,7 +714,7 @@ def PlayerEvents():
     if event.type == pygame.KEYUP:
         if event.key == pygame.K_LCTRL:
             bombIsPress = False
-                    
+    """
 # 距離判定(歐氏距離)
 def distance(x1, y1, x2, y2):
     a = x1 - x2
@@ -645,7 +724,7 @@ def distance(x1, y1, x2, y2):
 # 顯示分數
 def ShowScore(x, y):
     text = f"Score :  {score}"
-    score_render = font.render(text, True, (255, 255, 255))
+    score_render = font32.render(text, True, (255, 255, 255))
     screen.blit(score_render, (x, y))
 
 # 繪製右側UI框
@@ -683,7 +762,7 @@ def DrawUI():
     ShowScore(top_left[0] + 2*block_size, top_left[1] + 3*block_size)                
     
     # 繪製殘機
-    life_text = font.render(f'Life : ',True ,(255, 255, 255))
+    life_text = font32.render(f'Life : ',True ,(255, 255, 255))
     screen.blit(life_text, (top_left[0] + 2*block_size, top_left[1] + 4.5*block_size))  
     for i in range(playerLives):
         x = top_left[0] + 2*block_size + 70 + i * 48
@@ -691,35 +770,113 @@ def DrawUI():
         screen.blit(imgPlayer, (x, y))
     
     # 繪製剩餘炸彈
-    bomb_text = font.render(f'Bomb : ',True ,(255, 255, 255))
+    bomb_text = font32.render(f'Bomb : ',True ,(255, 255, 255))
     screen.blit(bomb_text, (top_left[0] + 2*block_size, top_left[1] + 6*block_size))
     for i in range(bomb_count):
         x = top_left[0] + 2*block_size + 80 + i * 32
         y = top_left[1] + 6*block_size - 4
         screen.blit(imgBomb, (x, y))
 
+# 初始化所有變數與物件
+def reset_game():
+    global enemies, bullets, enemy_bullets, explosions, bomb_effects
+    global score, playerX, playerY, playerLives
+    global isInvincible, invincibleDuration, lastInvincibleTime
+    global shootCooldown, lastShootTime
+    global bomb_count, bombIsPress
+    global boss_is_defeated
+    global waves
+
+    # 清空所有列表
+    enemies.clear()
+    bullets.clear()
+    enemy_bullets.clear()
+    explosions.clear()
+    bomb_effects.clear()
+
+    # 重置分數
+    score = 0
+
+    # 重置玩家位置和狀態
+    playerX = gameWidth // 2
+    playerY = HEIGHT - 50
+    playerLives = 3
+    isInvincible = False
+    lastInvincibleTime = 0
+
+    # 重置射擊相關變數
+    shootCooldown = 200
+    lastShootTime = 0
+
+    # 重置炸彈數量和狀態
+    bomb_count = 3
+    bombIsPress = False
+
+    # 重置 Boss 狀態
+    boss_is_defeated = False
+
+    # 重置波次觸發狀態
+    for wave in waves:
+        wave["triggered"] = False
+
 # 遊戲主迴圈
 running = True
+current_state = GAME_START
+final_score = 0
+reset_game()
 
 while running:
-    # 填充背景顏色
-    screen.blit(imgBackGround, (0,0))   
-    
-    # 處理事件
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    draw_player()
-    ShowEnemy()  
-    update_enemy_bullets()
-    update_explosion()  
-    PlayerEvents()
-    showBullets()
-    spawn_enemies_by_wave()
-
-    DrawUI()
-    pygame.display.update()  # 更新顯示
-    clock.tick(60)  # 控制遊戲速度
+    # 初始場景
+    if current_state == GAME_START:
+        # 繪製場景
+        draw_start_scene(screen)
+        pygame.display.update()
+        # 事件處理
+        current_state, running = handle_start_scene_events(current_state)
+    # 遊戲主體        
+    elif current_state == GAME_PLAY:
+        # 取得事件
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            # 處理一次性的按鍵按下/放開(炸彈)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LCTRL and bomb_count > 0 and not bombIsPress:
+                    enemy_bullets.clear()
+                    bomb_count -= 1
+                    bombIsPress = True
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_LCTRL:
+                    bombIsPress = False
+        # 填充背景顏色
+        screen.blit(imgBackGround, (0,0))   
+        # 更新並繪製遊戲元素
+        draw_player()
+        ShowEnemy()  
+        update_enemy_bullets()
+        update_explosion()  
+        PlayerEvents()
+        showBullets()
+        spawn_enemies_by_wave()
+        DrawUI()
+        pygame.display.update()  # 更新顯示
+        clock.tick(60)  # 控制遊戲速度
+        # 檢測勝負
+        if boss_is_defeated:
+            final_score = score
+            current_state = GAME_WIN
+        if playerLives <= 0:
+            final_score = score
+            current_state = GAME_OVER
+    # 勝利場景
+    elif current_state == GAME_WIN:
+        draw_win_scene(screen, final_score)
+        pygame.display.update()
+        current_state, running = handle_win_scene_events(current_state)
+    # 失敗場景
+    elif current_state == GAME_OVER:
+        draw_game_over_scene(screen, final_score)
+        pygame.display.update()
+        current_state, running = handle_game_over_scene_events(current_state)
     
 pygame.quit()
