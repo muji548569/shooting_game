@@ -14,12 +14,6 @@ pygame.display.set_caption("彈幕射擊遊戲")
 # 字形
 font = pygame.font.Font('Asset/fonts/m6x11.ttf', 32)
 
-# 時鐘
-clock = pygame.time.Clock()
-
-# 記錄遊戲開始時間 (可選)
-game_start_time = pygame.time.get_ticks()
-
 # 方框區域設定
 top_left = (gameWidth, 0)
 block_size = 32  # 假設每個方塊的大小是 32x32
@@ -52,6 +46,7 @@ imgEnemyBullet03 = pygame.image.load('Asset/enemy_bullet_3.png')
 imgEnemyBullet04 = pygame.image.load('Asset/enemy_bullet_4.png')
 imgBomb = pygame.image.load('Asset/bomb.png')
 imgSmoke = pygame.image.load('Asset/effects/smoke_0.png')
+imgBoss = pygame.image.load('Asset/boss.png')
 
 # TODO: 添加音效
 
@@ -60,15 +55,6 @@ bullets = []            # 保存player子彈
 enemy_bullets = []      # 保存敵機子彈
 explosions = []         # 保存爆炸特效
 bomb_effects = []       # 保存炸彈特效
-
-# 設定射擊間隔和追蹤上次射擊時間
-shootCooldown = 200
-lastShootTime = 0  # 初始化為0
-
-# 炸彈數量
-bomb_count = 3
-# 炸彈鍵被按下
-bombIsPress = False
 
 score = 0 # 分數
 
@@ -81,6 +67,21 @@ playerLives = 3
 isInvincible = False        # 是否處於無敵狀態
 invincibleDuration = 2000   # 無敵時間
 lastInvincibleTime = 0      # 紀錄開始無敵的時間點
+
+# 設定射擊間隔和追蹤上次射擊時間
+shootCooldown = 200
+lastShootTime = 0  # 初始化為0
+
+# 炸彈數量
+bomb_count = 3
+# 炸彈鍵被按下
+bombIsPress = False
+
+# 時鐘
+clock = pygame.time.Clock()
+
+# 記錄遊戲開始時間
+game_start_time = pygame.time.get_ticks()
 
 # 波次
 waves = [
@@ -169,7 +170,6 @@ class Enemy01(Enemy):
                 bullet_angle = angle_to_player + math.radians(i * 10)
                 enemy_bullets.append(EnemyBullet(self.x + self.size / 2, self.y + self.size / 2, bullet_angle))
                 self.last_shoot_time = current_time
-
     
 # Enemy02(圓形子彈)
 class Enemy02(Enemy):
@@ -206,8 +206,7 @@ class Enemy03(Enemy):
     def shoot(self, player_x, player_y):
         # TODO: 射擊邏輯
         pass
-
-            
+           
 # 移動策略 抽象類 (介面)
 class MovementStrategy:
     def move(self, enemy):
@@ -388,14 +387,13 @@ def spawn_enemy(enemy_info):
     if enemy_type == "Enemy01":
         return Enemy01(x, y, speed, movement_strategy)
     elif enemy_type == "Enemy02":
-        return Enemy01(x, y, speed, movement_strategy)
+        return Enemy02(x, y, speed, movement_strategy)
     elif enemy_type == "Enemy03":
-        return Enemy01(x, y, speed, movement_strategy)
+        return Enemy03(x, y, speed, movement_strategy)
     # 預設
     else:
         return Enemy01(x, y, speed, movement_strategy)
         
-
 # 根據波次生成敵人。
 def spawn_enemies_by_wave():
     # 取得目前遊戲運行時間
