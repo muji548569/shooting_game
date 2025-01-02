@@ -93,12 +93,14 @@ waves = [
             {"type": "Enemy01", "x": 150, "y": 50, "speed": 2},
             {"type": "Enemy01", "x": gameWidth - 50, "y": 100, "speed": -2},
             {"type": "Enemy01", "x": gameWidth - 100,"y": 100, "speed": -2},
-            {"type": "Enemy01", "x": gameWidth - 150,"y": 100, "speed": -2}
+            {"type": "Enemy01", "x": gameWidth - 150,"y": 100, "speed": -2},
+            {"type": "Enemy03", "x": -block_size, "y": 75, "speed": 1.5},
+            {"type": "Enemy03", "x": gameWidth + block_size, "y": 75, "speed": -1.5}
         ],
         "triggered": False
     },
     {
-        "time": 10000,
+        "time": 80000,
         "enemies": [
             {"type": "Enemy02", "x": 50, "y": 50, "speed": 2},
             {"type": "Enemy02", "x": 100, "y": 50, "speed": 2},
@@ -201,6 +203,35 @@ class Enemy02(Enemy):
         先呼叫父類別的 move()，再加上其它特殊邏輯 (如果有需要)。
         """
         super().move()
+
+class Enemy03(Enemy):
+    def __init__(self, x, y, speed):
+        super().__init__(x, y, speed)
+        self.health = 8
+        self.img = imgEnemy02  #TODO:更換圖片
+        self.shoot_cooldown = 1000 # 子彈生成冷卻時間
+        self.last_shoot_time = 0
+        self.time = 0
+    
+    def shoot(self, player_x, player_y):
+        # TODO: 射擊邏輯
+        pass
+    
+    def move(self):
+        # 先讓 time 累加。可以把 speed 當做「每幀增加多少時間」
+        self.time += 0.5        # 調整數字可改變「走路速度」或「週期」感
+        # 正弦波：x 持續往右，y 隨正弦函式波動
+        amplitude = 50          # 振幅
+        frequency = 0.025         # 頻率
+        
+        self.x += self.speed    # 持續往右
+        self.y += math.sin(self.time * frequency) * amplitude * 0.02    # 再縮放一次
+        
+        # 出界判定
+        if self.x > gameWidth + 100 or self.x < -100 or self.y > HEIGHT + 100 or self.y < -100:
+            enemies.remove(self)
+            print('enemies is remove')
+            
 
 # 生成Enemy
 def ShowEnemy():
@@ -331,6 +362,8 @@ def spawn_enemy(enemy_type, x, y, speed):
         return Enemy01(x, y, speed)
     if enemy_type == "Enemy02":
         return Enemy02(x, y, speed)
+    if enemy_type == "Enemy03":
+        return Enemy03(x, y, speed)
     # ...有其他敵人類型也添加在此
 
 # 根據波次生成敵人。
@@ -496,13 +529,14 @@ def DrawUI():
             x = top_left[0] + col * block_size
             y = top_left[1] + row * block_size
             screen.blit(image, (x, y))
-    screen.blit(imgStar, (top_left[0] + 2*block_size, top_left[1] + 12*block_size))  # 繪製圖片
-    ShowScore(top_left[0] + 2*block_size, top_left[1] + 3*block_size)                # 繪製分數
+    # 繪製圖片
+    screen.blit(imgStar, (top_left[0] + 2*block_size, top_left[1] + 12*block_size))  
+    # 繪製分數
+    ShowScore(top_left[0] + 2*block_size, top_left[1] + 3*block_size)                
     
     # 繪製殘機
     life_text = font.render(f'Life : ',True ,(255, 255, 255))
     screen.blit(life_text, (top_left[0] + 2*block_size, top_left[1] + 4.5*block_size))  
-    
     for i in range(playerLives):
         x = top_left[0] + 2*block_size + 70 + i * 48
         y = top_left[1] + 4.5*block_size - 4
@@ -511,7 +545,6 @@ def DrawUI():
     # 繪製剩餘炸彈
     bomb_text = font.render(f'Bomb : ',True ,(255, 255, 255))
     screen.blit(bomb_text, (top_left[0] + 2*block_size, top_left[1] + 6*block_size))
-    
     for i in range(bomb_count):
         x = top_left[0] + 2*block_size + 80 + i * 32
         y = top_left[1] + 6*block_size - 4
@@ -529,7 +562,6 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    #玩家圖像
     draw_player()
     ShowEnemy()  
     update_enemy_bullets()
