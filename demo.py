@@ -1,10 +1,15 @@
 import pygame
 import random
 import math
-import enum
 
 # 初始化 pygame
 pygame.init()
+# 初始化mixer
+pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096)
+# 設定全局音量
+pygame.mixer.music.set_volume(0.5)  
+
+current_music = None
 
 # 視窗設定
 WIDTH, HEIGHT = 768, 640
@@ -50,7 +55,28 @@ imgBomb = pygame.image.load('Asset/bomb.png')
 imgSmoke = pygame.image.load('Asset/effects/smoke_0.png')
 imgBoss = pygame.image.load('Asset/boss.png')
 
-# TODO: 添加音效
+# 預加載BGM
+music_tracks = {
+    'start': 'Asset/audio/bgm_gamestart.mp3',
+    'play': 'Asset/audio/bgm_gameplay.mp3',
+    'win': 'Asset/audio/bgm_gamewin.wav',
+    'over': 'Asset/audio/bgm_gameover.mp3'
+}
+
+# 加載音效
+snd_shoot = pygame.mixer.Sound('Asset/audio/snd_shoot.wav')
+snd_hit = pygame.mixer.Sound('Asset/audio/snd_hit.wav')
+snd_dead = pygame.mixer.Sound('Asset/audio/snd_dead.wav')
+snd_alarm = pygame.mixer.Sound('Asset/audio/snd_alarm.MP3')
+snd_bomb = pygame.mixer.Sound('Asset/audio/snd_bomb.wav')
+
+# 調整音效音量
+snd_hit.set_volume(0.2)
+snd_shoot.set_volume(0.2)
+snd_alarm.set_volume(0.3)
+snd_dead.set_volume(0.2)
+snd_bomb.set_volume(0.3)
+
 
 enemies = []            # 保存敵人
 bullets = []            # 保存player子彈
@@ -94,10 +120,11 @@ clock = pygame.time.Clock()
 # 記錄遊戲開始時間
 game_start_time = pygame.time.get_ticks()
 
+
 # 波次
 waves = [
     {
-        "time": 100000, # 出現時間(毫秒)
+        "time": 3000, # 出現時間(毫秒)
         "enemies": [
             {"type": "Enemy01", "x": 50, "y": 50, "speed": 2, "movement": "straight"},
             {"type": "Enemy01", "x": 100, "y": 50, "speed": 2, "movement": "straight"},
@@ -111,7 +138,7 @@ waves = [
         "triggered": False
     },
     {
-        "time": 100000,
+        "time": 8000,
         "enemies": [
             {"type": "Enemy02", "x": 50, "y": 50, "speed": 2, "movement": "straight"},
             {"type": "Enemy02", "x": 100, "y": 50, "speed": 2, "movement": "straight"},
@@ -124,7 +151,7 @@ waves = [
     },
     # Boss 波次
     {
-        "time": 1000,
+        "time": 30000,
         "enemies": [
             {
                 "type": "Boss",
@@ -467,13 +494,13 @@ class Bullet():
                 e.isDead()  # 刪除敵人
                 score += 100
                 # 添加爆炸特效
-                explosions.append(
-                    Explosion(
+                explosions.append(Explosion(
                         bullet_center_x - explosion_images[0].get_width() / 2,
                         bullet_center_y - explosion_images[0].get_height() / 2,
                         explosion_images
-                    )
-                )
+                        ))
+                # 擊中音效
+                snd_hit.play()
                 
 
  #保存現有子彈
@@ -625,7 +652,8 @@ def update_enemy_bullets():
                 if not isInvincible:    # 若不在無敵時間
                     playerLives -= 1
                     print(f'玩家受擊，剩{playerLives}次機會')
-                    
+                    # 受傷音效
+                    snd_dead.play()
                     # 進入無敵
                     isInvincible = True
                     lastInvincibleTime = pygame.time.get_ticks()
@@ -698,6 +726,7 @@ def PlayerEvents():
     if keys[pygame.K_LSHIFT]:
         currentTime = pygame.time.get_ticks()               # 獲取當前時間
         if currentTime - lastShootTime > shootCooldown:     # 比較時間差
+            snd_shoot.play()
             bullets.append(Bullet())
             lastShootTime = currentTime                     # 更新上次射擊時間
     """
@@ -819,6 +848,16 @@ def reset_game():
     for wave in waves:
         wave["triggered"] = False
 
+# 切換音樂
+def play_music_preloaded(state):
+    global current_music
+    music_path = music_tracks.get(state)
+    if music_path and current_music != music_path:
+        pygame.mixer.music.stop()
+        pygame.mixer.music.load(music_path)
+        pygame.mixer.music.play(-1)
+        current_music = music_path
+
 # 遊戲主迴圈
 running = True
 current_state = GAME_START
@@ -831,6 +870,8 @@ while running:
         # 繪製場景
         draw_start_scene(screen)
         pygame.display.update()
+        # BGM
+        play_music_preloaded('start')
         # 事件處理
         current_state, running = handle_start_scene_events(current_state)
     # 遊戲主體        
@@ -845,11 +886,13 @@ while running:
                     enemy_bullets.clear()
                     bomb_count -= 1
                     bombIsPress = True
+                    snd_bomb.play()
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_LCTRL:
                     bombIsPress = False
         # 填充背景顏色
-        screen.blit(imgBackGround, (0,0))   
+        screen.blit(imgBackGround, (0,0))
+        play_music_preloaded('play')
         # 更新並繪製遊戲元素
         draw_player()
         ShowEnemy()  
@@ -872,11 +915,14 @@ while running:
     elif current_state == GAME_WIN:
         draw_win_scene(screen, final_score)
         pygame.display.update()
+        play_music_preloaded('win')
         current_state, running = handle_win_scene_events(current_state)
     # 失敗場景
     elif current_state == GAME_OVER:
         draw_game_over_scene(screen, final_score)
         pygame.display.update()
+        play_music_preloaded('over')
         current_state, running = handle_game_over_scene_events(current_state)
-    
+ 
+pygame.mixer.music.stop()   
 pygame.quit()
