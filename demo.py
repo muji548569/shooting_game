@@ -86,7 +86,7 @@ game_start_time = pygame.time.get_ticks()
 # 波次
 waves = [
     {
-        "time": 2000,
+        "time": 100000, # 出現時間(毫秒)
         "enemies": [
             {"type": "Enemy01", "x": 50, "y": 50, "speed": 2, "movement": "straight"},
             {"type": "Enemy01", "x": 100, "y": 50, "speed": 2, "movement": "straight"},
@@ -100,7 +100,7 @@ waves = [
         "triggered": False
     },
     {
-        "time": 8000,
+        "time": 100000,
         "enemies": [
             {"type": "Enemy02", "x": 50, "y": 50, "speed": 2, "movement": "straight"},
             {"type": "Enemy02", "x": 100, "y": 50, "speed": 2, "movement": "straight"},
@@ -108,6 +108,20 @@ waves = [
             {"type": "Enemy02", "x": gameWidth - 50, "y": 100, "speed": -2, "movement": "sine"},
             {"type": "Enemy02", "x": gameWidth - 100,"y": 100, "speed": -2, "movement": "sine"},
             {"type": "Enemy02", "x": gameWidth - 150,"y": 100, "speed": -2, "movement": "sine"}
+        ],
+        "triggered": False
+    },
+    # Boss 波次
+    {
+        "time": 1000,
+        "enemies": [
+            {
+                "type": "Boss",
+                "x": gameWidth // 2 - 128,
+                "y": -128,
+                "speed": 1,
+                "movement": "boss"
+            }
         ],
         "triggered": False
     }
@@ -193,7 +207,7 @@ class Enemy02(Enemy):
                 )
             self.last_shoot_time = current_time
 
-# Enemy03(正弦波移動)
+# Enemy03() TODO
 class Enemy03(Enemy):
     def __init__(self, x, y, speed, movement_strategy):
         super().__init__(x, y, speed, movement_strategy)
@@ -207,6 +221,83 @@ class Enemy03(Enemy):
         # TODO: 射擊邏輯
         pass
            
+# Boss
+class Boss(Enemy):
+    def __init__(self, x, y, speed, movement_strategy):
+        super().__init__(x, y, speed, movement_strategy)
+        self.health = 100           # Boss 總血量
+        self.img = imgBoss          # Boss 圖片
+        self.size = 256             # Boss 圖片寬高
+        # 旋轉
+        self.rotation_angle = 0     # 初始角度
+        self.rotation_speed = 2     # 旋轉速度
+        # 射擊
+        self.shoot_cooldown = 200   # 射擊間隔
+        self.last_shoot_time = 0    
+        # 二階段標籤
+        self.second_phase = False
+    
+    def shoot(self, player_x, player_y):
+        """ 
+        Boss 旋轉射擊邏輯：
+          - 第一階段：每次發射扇形子彈
+          - 第二階段：改用一種瘋狂散射 或 圓形彈
+        """
+        current_time = pygame.time.get_ticks()
+        
+        # 如果還沒到目標位置，就不射擊（例如：正在從頂部移動下來）
+        if self.speed != 0:
+            return
+        
+        # 根據血量判斷是否啟動第二階段
+        if self.health <= 50 and not self.second_phase:
+            self.second_phase = True
+            print("Boss 進入第二階段！")
+        
+        if current_time - self.last_shoot_time > self.shoot_cooldown:
+            self.last_shoot_time = current_time
+            
+            if not self.second_phase:
+                # === 第一階段：多方向扇形射擊 ===
+                center_x = self.x + self.size / 2
+                center_y = self.y + self.size / 2
+                base_angle = math.radians(self.rotation_angle)  # 跟隨旋轉方向
+                
+                for i in range(5):
+                    angle_i = base_angle + math.radians(i * 72)
+                    for j in range(-1, 2):
+                        bullet_angle = angle_i + math.radians(j * 5)
+                        enemy_bullets.append(
+                            EnemyBullet(center_x, center_y, bullet_angle)
+                        )
+                        
+            else:
+                # === 第二階段：圓形彈 or 瘋狂散射 ===
+                self.shoot_cooldown = 100
+                center_x = self.x + self.size / 2
+                center_y = self.y + self.size / 2
+                for i in range(8):
+                    angle_1 = math.radians(self.rotation_angle + i * 45)
+                    enemy_bullets.append(
+                        EnemyBulletCircular(center_x, center_y, angle_1)
+                    )
+
+    
+    
+    def isDead(self):
+        global score
+        if self.health <= 0:
+            if self in enemies:
+                enemies.remove(self)
+                score += 5000       # Boss 被擊破加更多分
+            explosions.append(
+                Explosion(
+                    self.x + self.img.get_width() / 2,
+                    self.y + self.img.get_height() / 2,
+                    isDead_images
+                )
+            )
+        
 # 移動策略 抽象類 (介面)
 class MovementStrategy:
     def move(self, enemy):
@@ -240,15 +331,38 @@ class SineWaveMovement(MovementStrategy):
             enemy.y > enemy.game_height + 100 or enemy.y < -100):
             enemy.is_out_of_bound = True
 
+# 移動策略(Boss)
+class BossMovement(MovementStrategy):
+    def __init__(self, target_y = 80):
+        super().__init__()
+        self.target_y = target_y  # boss目標位置
+    def move(self, enemy):
+        # 使 boss 下降到指定位置
+        if enemy.y < self.target_y:
+            enemy.y += enemy.speed
+        else:
+            enemy.speed = 0
+        # 不斷更新角度
+        enemy.rotation_angle = (enemy.rotation_angle + enemy.rotation_speed) % 360
+
 # 更新 & 顯示 Enemy
 def ShowEnemy():
     global x, y
     for e in enemies:
         # 移動並繪製敵人
         e.move()
-        screen.blit(e.img, (e.x, e.y))
         # 呼叫每個敵人的 shoot()
         e.shoot(playerX, playerY)
+        
+        if hasattr(e, 'rotation_angle'):
+            # 以 e.rotation_angle 旋轉
+            rotated_image = pygame.transform.rotate(e.img, e.rotation_angle)
+            # 修正繪製位置讓 Boss 仍然「置中」
+            new_rect = rotated_image.get_rect(center=(e.x + e.size // 2, e.y + e.size // 2))
+            screen.blit(rotated_image, new_rect)
+        else:
+            screen.blit(e.img, (e.x, e.y))
+
         # 若被標記出界則刪除
         if e.is_out_of_bound and e in enemies:
             enemies.remove(e)
@@ -378,11 +492,13 @@ def spawn_enemy(enemy_info):
     # 判斷移動策略
     if movement_mode == "sine":
         movement_strategy = SineWaveMovement()
+    elif movement_mode == "boss":
+        movement_strategy = BossMovement()
         # ...有其他移動類型也添加在此
     else:
         # 預設用 straight
         movement_strategy = StraightMovement()
-    # ...有其他敵人類型也添加在此
+    
     
     if enemy_type == "Enemy01":
         return Enemy01(x, y, speed, movement_strategy)
@@ -390,6 +506,9 @@ def spawn_enemy(enemy_info):
         return Enemy02(x, y, speed, movement_strategy)
     elif enemy_type == "Enemy03":
         return Enemy03(x, y, speed, movement_strategy)
+    elif enemy_type == "Boss":
+        return Boss(x, y, speed, movement_strategy)
+    # ...有其他敵人類型也添加在此
     # 預設
     else:
         return Enemy01(x, y, speed, movement_strategy)
