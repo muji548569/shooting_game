@@ -30,7 +30,6 @@ rows = 20     # 方框的高度包含 20 個方塊
 ui_images = [
     pygame.image.load(f'Asset/BG/UI_{i}.png') for i in range(9)
 ]
-
 # 加載特效動畫
 explosion_images = [
     pygame.image.load(f'Asset/effects/explosion_{i}.png') for i in range(4)
@@ -88,40 +87,44 @@ waves = [
     {
         "time": 2000,
         "enemies": [
-            {"type": "Enemy01", "x": 50, "y": 50, "speed": 2},
-            {"type": "Enemy01", "x": 100, "y": 50, "speed": 2},
-            {"type": "Enemy01", "x": 150, "y": 50, "speed": 2},
-            {"type": "Enemy01", "x": gameWidth - 50, "y": 100, "speed": -2},
-            {"type": "Enemy01", "x": gameWidth - 100,"y": 100, "speed": -2},
-            {"type": "Enemy01", "x": gameWidth - 150,"y": 100, "speed": -2},
-            {"type": "Enemy03", "x": -block_size, "y": 75, "speed": 1.5},
-            {"type": "Enemy03", "x": gameWidth + block_size, "y": 75, "speed": -1.5}
+            {"type": "Enemy01", "x": 50, "y": 50, "speed": 2, "movement": "straight"},
+            {"type": "Enemy01", "x": 100, "y": 50, "speed": 2, "movement": "straight"},
+            {"type": "Enemy01", "x": 150, "y": 50, "speed": 2, "movement": "straight"},
+            {"type": "Enemy01", "x": gameWidth - 50, "y": 100, "speed": -2, "movement": "sine"},
+            {"type": "Enemy01", "x": gameWidth - 100,"y": 100, "speed": -2, "movement": "sine"},
+            {"type": "Enemy01", "x": gameWidth - 150,"y": 100, "speed": -2, "movement": "sine"},
+            {"type": "Enemy03", "x": -block_size, "y": 75, "speed": 1.5, "movement": "sine"},
+            {"type": "Enemy03", "x": gameWidth + block_size, "y": 75, "speed": -1.5, "movement": "sine"}
         ],
         "triggered": False
     },
     {
-        "time": 80000,
+        "time": 8000,
         "enemies": [
-            {"type": "Enemy02", "x": 50, "y": 50, "speed": 2},
-            {"type": "Enemy02", "x": 100, "y": 50, "speed": 2},
-            {"type": "Enemy02", "x": 150, "y": 50, "speed": 2},
-            {"type": "Enemy02", "x": gameWidth - 50, "y": 100, "speed": -2},
-            {"type": "Enemy02", "x": gameWidth - 100,"y": 100, "speed": -2},
-            {"type": "Enemy02", "x": gameWidth - 150,"y": 100, "speed": -2}
+            {"type": "Enemy02", "x": 50, "y": 50, "speed": 2, "movement": "straight"},
+            {"type": "Enemy02", "x": 100, "y": 50, "speed": 2, "movement": "straight"},
+            {"type": "Enemy02", "x": 150, "y": 50, "speed": 2, "movement": "straight"},
+            {"type": "Enemy02", "x": gameWidth - 50, "y": 100, "speed": -2, "movement": "sine"},
+            {"type": "Enemy02", "x": gameWidth - 100,"y": 100, "speed": -2, "movement": "sine"},
+            {"type": "Enemy02", "x": gameWidth - 150,"y": 100, "speed": -2, "movement": "sine"}
         ],
         "triggered": False
     }
 ]
 
 # Enemy類
-class Enemy():
-    def __init__(self, x, y, speed):
+class Enemy:
+    def __init__(self, x, y, speed, movement_strategy):
         self.health = 3
         self.img = imgEnemy01
         self.size = 32
         self.x = x
         self.y = y
+        self.game_width = gameWidth
+        self.game_height = HEIGHT
         self.speed = speed
+        self.is_out_of_bound = False
+        self.movement_strategy = movement_strategy
     # 受擊
     def Hurt(self):
         self.health -= 1
@@ -140,22 +143,18 @@ class Enemy():
                         isDead_images
                         )
                     )
-
     # 發射子彈
-    def shoot(self, player_x, player_y):
-        
+    def shoot(self, player_x, player_y):        
         pass
     # 移動或其他通用行為
     def move(self):
-        self.x += self.speed
-        # 出界判斷
-        if self.x > gameWidth + 2*self.size or self.x < -2*self.size:
-            self.speed *= -1
+        # 呼叫「策略物件」來完成移動邏輯
+        self.movement_strategy.move(self)
             
-# Enemy01(三方向)
+# Enemy01(三方向子彈)
 class Enemy01(Enemy):
-    def __init__(self, x, y, speed):
-        super().__init__(x, y, speed)
+    def __init__(self, x, y, speed, movement_strategy):
+        super().__init__(x, y, speed, movement_strategy)
         self.img = imgEnemy01
         
     def shoot(self, player_x, player_y):
@@ -170,16 +169,12 @@ class Enemy01(Enemy):
                 bullet_angle = angle_to_player + math.radians(i * 10)
                 enemy_bullets.append(EnemyBullet(self.x + self.size / 2, self.y + self.size / 2, bullet_angle))
                 self.last_shoot_time = current_time
-    def move(self):
-        """
-        先呼叫父類別的 move()，再加上其它特殊邏輯 (如果有需要)。
-        """
-        super().move()
-            
-# Enemy02(圓形)
+
+    
+# Enemy02(圓形子彈)
 class Enemy02(Enemy):
-    def __init__(self, x, y, speed):
-        super().__init__(x, y, speed)
+    def __init__(self, x, y, speed, movement_strategy):
+        super().__init__(x, y, speed, movement_strategy)
         self.health = 5
         self.img = imgEnemy02
         self.shoot_cooldown = 1000 # 子彈生成冷卻時間
@@ -197,16 +192,11 @@ class Enemy02(Enemy):
                     EnemyBulletCircular(initial_x, initial_y, angle)
                 )
             self.last_shoot_time = current_time
-              
-    def move(self):
-        """
-        先呼叫父類別的 move()，再加上其它特殊邏輯 (如果有需要)。
-        """
-        super().move()
 
+# Enemy03(正弦波移動)
 class Enemy03(Enemy):
-    def __init__(self, x, y, speed):
-        super().__init__(x, y, speed)
+    def __init__(self, x, y, speed, movement_strategy):
+        super().__init__(x, y, speed, movement_strategy)
         self.health = 8
         self.img = imgEnemy02  #TODO:更換圖片
         self.shoot_cooldown = 1000 # 子彈生成冷卻時間
@@ -216,24 +206,42 @@ class Enemy03(Enemy):
     def shoot(self, player_x, player_y):
         # TODO: 射擊邏輯
         pass
-    
-    def move(self):
+
+            
+# 移動策略 抽象類 (介面)
+class MovementStrategy:
+    def move(self, enemy):
+        # 子類需實做
+        raise NotImplementedError('This method should be overridden by subclass')
+
+# 移動策略 (直線)
+class StraightMovement(MovementStrategy):
+    def move(self, enemy):
+        # 移動邏輯
+        enemy.x += enemy.speed
+        # 出界檢測與處理
+        if enemy.x > enemy.game_width + enemy.size or enemy.x < -enemy.size:
+            enemy.speed *= -1  
+
+# 移動策略 (正弦波)
+class SineWaveMovement(MovementStrategy):
+    def __init__(self):
+        self.time = 0
+    def move(self, enemy):
+        # 移動邏輯
         # 先讓 time 累加。可以把 speed 當做「每幀增加多少時間」
         self.time += 0.5        # 調整數字可改變「走路速度」或「週期」感
-        # 正弦波：x 持續往右，y 隨正弦函式波動
         amplitude = 50          # 振幅
-        frequency = 0.025         # 頻率
-        
-        self.x += self.speed    # 持續往右
-        self.y += math.sin(self.time * frequency) * amplitude * 0.02    # 再縮放一次
-        
-        # 出界判定
-        if self.x > gameWidth + 100 or self.x < -100 or self.y > HEIGHT + 100 or self.y < -100:
-            enemies.remove(self)
-            print('enemies is remove')
-            
+        frequency = 0.035       # 頻率
+        # 正弦波：x 持續往右，y 隨正弦函式波動
+        enemy.x += enemy.speed
+        enemy.y += math.sin(self.time * frequency) * amplitude * 0.05
+        # 出界檢測與處理
+        if (enemy.x > enemy.game_width + 100 or enemy.x < -100 or
+            enemy.y > enemy.game_height + 100 or enemy.y < -100):
+            enemy.is_out_of_bound = True
 
-# 生成Enemy
+# 更新 & 顯示 Enemy
 def ShowEnemy():
     global x, y
     for e in enemies:
@@ -242,6 +250,9 @@ def ShowEnemy():
         screen.blit(e.img, (e.x, e.y))
         # 呼叫每個敵人的 shoot()
         e.shoot(playerX, playerY)
+        # 若被標記出界則刪除
+        if e.is_out_of_bound and e in enemies:
+            enemies.remove(e)
 
 # Bullet類
 class Bullet():
@@ -357,14 +368,33 @@ class Explosion:
         screen.blit(current_image, (self.x, self.y))
 
 # 生成敵人
-def spawn_enemy(enemy_type, x, y, speed):
-    if enemy_type == "Enemy01":
-        return Enemy01(x, y, speed)
-    if enemy_type == "Enemy02":
-        return Enemy02(x, y, speed)
-    if enemy_type == "Enemy03":
-        return Enemy03(x, y, speed)
+def spawn_enemy(enemy_info):
+    # enemy_info: 一個字典，包含 type, x, y, speed, movement 等。
+    enemy_type = enemy_info["type"] 
+    x = enemy_info["x"]
+    y = enemy_info["y"]
+    speed = enemy_info["speed"]
+    movement_mode = enemy_info.get("movement", "straight")  # 沒定義時預設直線
+    
+    # 判斷移動策略
+    if movement_mode == "sine":
+        movement_strategy = SineWaveMovement()
+        # ...有其他移動類型也添加在此
+    else:
+        # 預設用 straight
+        movement_strategy = StraightMovement()
     # ...有其他敵人類型也添加在此
+    
+    if enemy_type == "Enemy01":
+        return Enemy01(x, y, speed, movement_strategy)
+    elif enemy_type == "Enemy02":
+        return Enemy01(x, y, speed, movement_strategy)
+    elif enemy_type == "Enemy03":
+        return Enemy01(x, y, speed, movement_strategy)
+    # 預設
+    else:
+        return Enemy01(x, y, speed, movement_strategy)
+        
 
 # 根據波次生成敵人。
 def spawn_enemies_by_wave():
@@ -376,7 +406,8 @@ def spawn_enemies_by_wave():
         if current_time >= wave["time"] and not wave["triggered"]:
             # 生成敵人
             for enemy_info in wave["enemies"]:
-                enemies.append(spawn_enemy(enemy_info["type"], enemy_info["x"], enemy_info["y"], enemy_info["speed"]))
+                new_enemy = spawn_enemy(enemy_info)
+                enemies.append(new_enemy)
             # 更改"triggered"標籤，避免重複觸發
             wave["triggered"] = True
 
@@ -476,14 +507,14 @@ def PlayerEvents():
             lastShootTime = currentTime                     # 更新上次射擊時間
     # 使用bomb
     if event.type == pygame.KEYDOWN:
-        if event.key == pygame.K_LCTRL and bomb_count > 0 and bombIsPress == False:
+        if event.key == pygame.K_LCTRL and bomb_count > 0 and not bombIsPress:
             enemy_bullets.clear()                           # 清空敵方子彈
             bomb_count -= 1
             # TODO: 炸彈特效
             # bomb_effects.append((Explosion(playerX, playerY, explosion_images)))  
             bombIsPress = True
             
-            
+    # 放開炸彈鍵    
     if event.type == pygame.KEYUP:
         if event.key == pygame.K_LCTRL:
             bombIsPress = False
