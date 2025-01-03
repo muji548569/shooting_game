@@ -18,6 +18,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("彈幕射擊遊戲")
 
 # 字形
+font16 = pygame.font.Font('Asset/fonts/m6x11.ttf', 16)
 font32 = pygame.font.Font('Asset/fonts/m6x11.ttf', 32)
 font48 = pygame.font.Font('Asset/fonts/m6x11.ttf', 48)
 
@@ -98,9 +99,10 @@ playerX = gameWidth // 2
 playerY = HEIGHT - 50
 playerSpeed = 5
 playerLives = 3          
-isInvincible = False        # 是否處於無敵狀態
-invincibleDuration = 2000   # 無敵時間
-lastInvincibleTime = 0      # 紀錄開始無敵的時間點
+isInvincible = False            # 是否處於無敵狀態
+invincibleDuration = 2000       # 無敵時間
+lastInvincibleTime = 0          # 紀錄開始無敵的時間點
+permanentInvincible = False     # 是否使用永久無敵
 
 # 設定射擊間隔和追蹤上次射擊時間
 shootCooldown = 200
@@ -828,12 +830,13 @@ def update_explosion():
     
 # 繪製player
 def draw_player():
-    global isInvincible
+    global isInvincible, permnentInvicible
     #檢查是否過了無敵時間
     if isInvincible:
         current_time = pygame.time.get_ticks()
-        if current_time - lastInvincibleTime >= invincibleDuration:
-            isInvincible = False
+        if not permanentInvincible:
+            if current_time - lastInvincibleTime >= invincibleDuration:
+                isInvincible = False
     # 無敵時間 player 閃爍
     if isInvincible:
         # 每0.2秒切換次顯示 or 不顯示
@@ -844,6 +847,10 @@ def draw_player():
     # 非無敵時間正常顯示
     else:
         screen.blit(imgPlayer, (playerX, playerY))
+    # 顯示永久無敵狀態
+    if permanentInvincible:
+        invincible_text = font16.render("Permanent Invincible is ON", True, (255, 0, 0))
+        screen.blit(invincible_text, (playerX - 50, playerY + 40))
         
 # Player事件處理
 def PlayerEvents():
@@ -951,7 +958,6 @@ def DrawUI():
     time_render = font32.render(time_text, True, (255, 255, 255))
     screen.blit(time_render, (top_left[0] + 2*block_size, top_left[1] + 8.5*block_size))
 
-
 # 初始化所有變數與物件
 def reset_game():
     global enemies, bullets, enemy_bullets, explosions, bomb_effects
@@ -962,6 +968,7 @@ def reset_game():
     global boss_is_defeated
     global waves
     global game_start_time
+    global permanentInvincible
 
     # 清空所有列表
     enemies.clear()
@@ -979,6 +986,7 @@ def reset_game():
     playerLives = 3
     isInvincible = False
     lastInvincibleTime = 0
+    permanentInvincible = False
 
     # 重置射擊相關變數
     shootCooldown = 200
@@ -1030,13 +1038,18 @@ while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            # 處理一次性的按鍵按下/放開(炸彈)
+            # 處理一次性的按鍵按下/放開
             if event.type == pygame.KEYDOWN:
+                # 使用炸彈
                 if event.key == pygame.K_LCTRL and bomb_count > 0 and not bombIsPress:
                     enemy_bullets.clear()
                     bomb_count -= 1
                     bombIsPress = True
                     snd_bomb.play()
+                # 處理 RCTRL 鍵以啟用永久無敵
+                if event.key == pygame.K_RETURN:
+                    isInvincible = True
+                    permanentInvincible = True
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_LCTRL:
                     bombIsPress = False
