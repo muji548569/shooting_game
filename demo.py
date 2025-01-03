@@ -763,6 +763,9 @@ def spawn_enemies_by_wave():
             for enemy_info in wave["enemies"]:
                 new_enemy = spawn_enemy(enemy_info)
                 enemies.append(new_enemy)
+                # 檢查是否生成的是 Boss
+                if enemy_info["type"] == "Boss":
+                    snd_alarm.play()
             # 更改"triggered"標籤，避免重複觸發
             wave["triggered"] = True
 
@@ -938,6 +941,16 @@ def DrawUI():
         x = top_left[0] + 2*block_size + 80 + i * 32
         y = top_left[1] + 6*block_size - 4
         screen.blit(imgBomb, (x, y))
+        
+    # 繪製遊戲時間
+    elapsed_ms = pygame.time.get_ticks() - game_start_time  # 經過的毫秒
+    elapsed_seconds = elapsed_ms // 1000  # 轉換為秒
+    minutes = elapsed_seconds // 60
+    seconds = elapsed_seconds % 60
+    time_text = f"Time: {minutes:02}:{seconds:02}"  # 格式化為 MM:SS
+    time_render = font32.render(time_text, True, (255, 255, 255))
+    screen.blit(time_render, (top_left[0] + 2*block_size, top_left[1] + 8.5*block_size))
+
 
 # 初始化所有變數與物件
 def reset_game():
