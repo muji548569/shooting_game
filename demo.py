@@ -131,9 +131,7 @@ waves = [
             {"type": "Enemy01", "x": 150, "y": 50, "speed": 2, "movement": "straight"},
             {"type": "Enemy01", "x": gameWidth - 50, "y": 100, "speed": -2, "movement": "sine"},
             {"type": "Enemy01", "x": gameWidth - 100,"y": 100, "speed": -2, "movement": "sine"},
-            {"type": "Enemy01", "x": gameWidth - 150,"y": 100, "speed": -2, "movement": "sine"},
-            {"type": "Enemy03", "x": -block_size, "y": 75, "speed": 1.5, "movement": "sine"},
-            {"type": "Enemy03", "x": gameWidth + block_size, "y": 75, "speed": -1.5, "movement": "sine"}
+            {"type": "Enemy01", "x": gameWidth - 150,"y": 100, "speed": -2, "movement": "sine"}
         ],
         "triggered": False
     },
@@ -151,7 +149,7 @@ waves = [
     },
     # Boss 波次
     {
-        "time": 30000,
+        "time": 60000,
         "enemies": [
             {
                 "type": "Boss",
@@ -169,9 +167,9 @@ waves = [
 def draw_start_scene(screen):
     screen.fill((0, 0, 0))
     title_text = font48.render("SHOOTING GAME", True, (255, 255, 255))
-    info_text = font32.render("Press any button", True, (255, 255, 255))
-    screen.blit(title_text, (100, 100))
-    screen.blit(info_text, (100, 200))
+    info_text = font32.render("Press any button to start", True, (255, 255, 255))
+    screen.blit(title_text, (250, 100))
+    screen.blit(info_text, (220, 400))
     # TODO: 裝飾or圖片
 
 # 事件處理(初始)
@@ -195,9 +193,9 @@ def draw_win_scene(screen, final_score):
     win_text = font48.render("Congratulations!!!", True, (255, 255, 0))
     score_text = font32.render(f"Final Score: {final_score}", True, (255, 255, 255))
     info_text = font32.render("Press any button to restart game", True, (255, 255, 255))
-    screen.blit(win_text, (100, 100))
-    screen.blit(score_text, (100, 200))
-    screen.blit(info_text, (100, 500))
+    screen.blit(win_text, (220, 100))
+    screen.blit(score_text, (250, 200))
+    screen.blit(info_text, (180, 500))
     
 # 事件處理(勝利)
 def handle_win_scene_events(current_state):
@@ -216,9 +214,9 @@ def draw_game_over_scene(screen, final_score):
     over_text = font48.render("GAME OVER", True, (255, 0, 0))
     score_text = font32.render(f"Final Score: {final_score}", True, (255, 255, 255))
     info_text = font32.render("Press any button to restart game", True, (255, 255, 255))
-    screen.blit(over_text, (100, 100))
-    screen.blit(score_text, (100, 200))
-    screen.blit(info_text, (100, 500))
+    screen.blit(over_text, (270, 100))
+    screen.blit(score_text, (270, 200))
+    screen.blit(info_text, (180, 500))
     # 顯示重新開始或退出提示
 
 # 事件處理(失敗)
@@ -318,13 +316,25 @@ class Enemy03(Enemy):
         super().__init__(x, y, speed, movement_strategy)
         self.health = 8
         self.img = imgEnemy02  #TODO:更換圖片
-        self.shoot_cooldown = 1000 # 子彈生成冷卻時間
+        self.shoot_cooldown = 200 # 子彈生成冷卻時間
         self.last_shoot_time = 0
         self.time = 0
+        self.shoot_angle = 0
+        self.shoot_rotation_speed = 5
     
     def shoot(self, player_x, player_y):
-        # TODO: 射擊邏輯
-        pass
+        current_time = pygame.time.get_ticks()
+        # 射擊邏輯
+        center_x = self.x + self.size / 2
+        center_y = self.y + self.size / 2
+        if current_time - self.last_shoot_time > self.shoot_cooldown:
+            self.last_shoot_time = current_time
+            # 更新旋轉角度
+            self.shoot_angle = (self.shoot_angle + self.shoot_rotation_speed) % 360
+            bullet_rad = math.radians(self.shoot_angle)
+            enemy_bullets.append(
+                EnemyBullet(center_x, center_y, bullet_rad)
+            )
            
 # Boss
 class Boss(Enemy):
@@ -355,7 +365,7 @@ class Boss(Enemy):
             return
         
         # 根據血量判斷是否啟動第二階段
-        if self.health <= 50 and not self.second_phase:
+        if self.health <= self.health // 2 and not self.second_phase:
             self.second_phase = True
             print("Boss 進入第二階段！")
         
@@ -435,6 +445,81 @@ class SineWaveMovement(MovementStrategy):
         if (enemy.x > enemy.game_width + 100 or enemy.x < -100 or
             enemy.y > enemy.game_height + 100 or enemy.y < -100):
             enemy.is_out_of_bound = True
+
+# 移動策略(懸停)
+class StandMovement(MovementStrategy):
+    def __init__(self, target_y, target_x, move_speed = 2):
+        super().__init__()
+        self.target_y = target_y
+        self.target_x = target_x
+        self.move_speed = move_speed
+        self.reached = False  # 標記是否已經到達目標位置
+        
+    def move(self, enemy):
+        if self.reached:
+            return  # 已到達目標位置，不進行移動
+        
+        # 計算移動方向
+        dx = self.target_x - enemy.x
+        dy = self.target_y - enemy.y
+        distance = math.hypot(dx, dy)
+        
+        if distance == 0:
+            self.reached = True
+            enemy.speed = 0  # 停止移動
+            return
+        
+        # 計算單位向量
+        dx /= distance
+        dy /= distance
+
+        # 移動敵人
+        enemy.x += dx * self.move_speed
+        enemy.y += dy * self.move_speed
+        
+        # 檢查是否已經接近目標位置
+        if math.hypot(self.target_x - enemy.x, self.target_y - enemy.y) < self.move_speed:
+            enemy.x = self.target_x
+            enemy.y = self.target_y
+            self.reached = True
+            enemy.speed = 0  # 停止移動
+
+# 移動策略(路徑點)
+class WaypointMovement(MovementStrategy):
+    def __init__(self, waypoints, move_speed=2):
+        super().__init__()
+        self.waypoints = waypoints  # 路點列表，包含 (x, y) 元組
+        self.current_waypoint = 0
+        self.move_speed = move_speed
+
+    def move(self, enemy):
+        if self.current_waypoint >= len(self.waypoints):
+            return  # 所有路點已經完成
+
+        target_x, target_y = self.waypoints[self.current_waypoint]
+
+        # 計算移動方向
+        dx = target_x - enemy.x
+        dy = target_y - enemy.y
+        distance = math.hypot(dx, dy)
+
+        if distance == 0:
+            self.current_waypoint += 1
+            return
+
+        # 計算單位向量
+        dx /= distance
+        dy /= distance
+
+        # 移動敵人
+        enemy.x += dx * self.move_speed
+        enemy.y += dy * self.move_speed
+
+        # 檢查是否已經接近當前路點
+        if math.hypot(target_x - enemy.x, target_y - enemy.y) < self.move_speed:
+            enemy.x = target_x
+            enemy.y = target_y
+            self.current_waypoint += 1
 
 # 移動策略(Boss)
 class BossMovement(MovementStrategy):
@@ -599,6 +684,13 @@ def spawn_enemy(enemy_info):
         movement_strategy = SineWaveMovement()
     elif movement_mode == "boss":
         movement_strategy = BossMovement()
+    elif movement_mode == "stand":
+        target_x = enemy_info.get("target_x", x)
+        target_y = enemy_info.get("target_y", y)
+        movement_strategy = StandMovement(target_x, target_y, move_speed=3)
+    elif movement_mode == "waypoint":
+        waypoints = enemy_info.get("waypoints", [])
+        movement_strategy = WaypointMovement(waypoints, move_speed=3)
         # ...有其他移動類型也添加在此
     else:
         # 預設用 straight
@@ -620,12 +712,13 @@ def spawn_enemy(enemy_info):
         
 # 根據波次生成敵人。
 def spawn_enemies_by_wave():
+    global game_start_time
     # 取得目前遊戲運行時間
-    current_time = pygame.time.get_ticks()
+    elapsed_time = pygame.time.get_ticks() - game_start_time
     # 檢查波次
     for wave in waves:
         # 如果目前時間已超過 wave["time"] 還未觸發
-        if current_time >= wave["time"] and not wave["triggered"]:
+        if elapsed_time >= wave["time"] and not wave["triggered"]:
             # 生成敵人
             for enemy_info in wave["enemies"]:
                 new_enemy = spawn_enemy(enemy_info)
@@ -815,6 +908,7 @@ def reset_game():
     global bomb_count, bombIsPress
     global boss_is_defeated
     global waves
+    global game_start_time
 
     # 清空所有列表
     enemies.clear()
@@ -847,6 +941,9 @@ def reset_game():
     # 重置波次觸發狀態
     for wave in waves:
         wave["triggered"] = False
+    
+    # 重置遊戲開始時間    
+    game_start_time = pygame.time.get_ticks()
 
 # 切換音樂
 def play_music_preloaded(state):
