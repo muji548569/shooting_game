@@ -755,6 +755,8 @@ def spawn_enemy(enemy_info):
 # 根據波次生成敵人。
 def spawn_enemies_by_wave():
     global game_start_time
+    if game_start_time is None:
+        return  # 尚未開始計時，跳過
     # 取得目前遊戲運行時間
     elapsed_time = pygame.time.get_ticks() - game_start_time
     # 檢查波次
@@ -1004,7 +1006,7 @@ def reset_game():
         wave["triggered"] = False
     
     # 重置遊戲開始時間    
-    game_start_time = pygame.time.get_ticks()
+    game_start_time = None
 
 # 切換音樂
 def play_music_preloaded(state):
@@ -1031,7 +1033,11 @@ while running:
         # BGM
         play_music_preloaded('start')
         # 事件處理
-        current_state, running = handle_start_scene_events(current_state)
+        new_state, running = handle_start_scene_events(current_state)
+        if new_state == GAME_PLAY:
+            game_start_time = pygame.time.get_ticks()  # 開始計時
+        current_state = new_state
+        
     # 遊戲主體        
     elif current_state == GAME_PLAY:
         # 取得事件
@@ -1046,7 +1052,7 @@ while running:
                     bomb_count -= 1
                     bombIsPress = True
                     snd_bomb.play()
-                # 處理 RCTRL 鍵以啟用永久無敵
+                # 處理 ENTER 鍵以啟用永久無敵
                 if event.key == pygame.K_RETURN:
                     isInvincible = True
                     permanentInvincible = True
