@@ -124,32 +124,68 @@ game_start_time = pygame.time.get_ticks()
 # 波次
 waves = [
     {
-        "time": 3000, # 出現時間(毫秒)
+        "time": 1000, # 出現時間(毫秒)
         "enemies": [
-            {"type": "Enemy01", "x": 50, "y": 50, "speed": 2, "movement": "straight"},
-            {"type": "Enemy01", "x": 100, "y": 50, "speed": 2, "movement": "straight"},
-            {"type": "Enemy01", "x": 150, "y": 50, "speed": 2, "movement": "straight"},
-            {"type": "Enemy01", "x": gameWidth - 50, "y": 100, "speed": -2, "movement": "sine"},
-            {"type": "Enemy01", "x": gameWidth - 100,"y": 100, "speed": -2, "movement": "sine"},
-            {"type": "Enemy01", "x": gameWidth - 150,"y": 100, "speed": -2, "movement": "sine"}
+            {"type": "Enemy01", "x": gameWidth - 50, "y": 150, "speed": -2, "movement": "straight"},
+            {"type": "Enemy01", "x": gameWidth - 150,"y": 150, "speed": -2, "movement": "straight"},
+            {"type": "Enemy01", "x": gameWidth - 250,"y": 150, "speed": -2, "movement": "straight"},
+            {"type": "Enemy01", "x": 50, "y": 250, "speed": 2, "movement": "straight"},
+            {"type": "Enemy01", "x": 150, "y": 250, "speed": 2, "movement": "straight"},
+            {"type": "Enemy01", "x": 250, "y": 250, "speed": 2, "movement": "straight"}
         ],
         "triggered": False
     },
     {
         "time": 8000,
         "enemies": [
-            {"type": "Enemy02", "x": 50, "y": 50, "speed": 2, "movement": "straight"},
-            {"type": "Enemy02", "x": 100, "y": 50, "speed": 2, "movement": "straight"},
-            {"type": "Enemy02", "x": 150, "y": 50, "speed": 2, "movement": "straight"},
-            {"type": "Enemy02", "x": gameWidth - 50, "y": 100, "speed": -2, "movement": "sine"},
-            {"type": "Enemy02", "x": gameWidth - 100,"y": 100, "speed": -2, "movement": "sine"},
-            {"type": "Enemy02", "x": gameWidth - 150,"y": 100, "speed": -2, "movement": "sine"}
+            {"type": "Enemy02", "x": 50, "y": 75, "speed": 2, "movement": "sine"},
+            {"type": "Enemy02", "x": 50,"y": 150, "speed": 2, "movement": "sine"},
+            {"type": "Enemy02", "x": 50,"y": 270, "speed": 2, "movement": "sine"},
+            {"type": "Enemy02", "x": gameWidth - 50, "y": 75, "speed": -2, "movement": "sine"},
+            {"type": "Enemy02", "x": gameWidth - 50,"y": 175, "speed": -2, "movement": "sine"},
+            {"type": "Enemy02", "x": gameWidth - 50,"y": 275, "speed": -2, "movement": "sine"}
+        ],
+        "triggered": False
+    },
+    {
+        "time": 15000,
+        "enemies": [
+            {"type": "Enemy03", "x": -32, "y": 50, "speed": 2, "movement": "stand", "target_x": 100, "target_y": 50},
+            {"type": "Enemy03", "x": -32, "y": 150, "speed": 2, "movement": "stand", "target_x": 100, "target_y": 150},
+            {"type": "Enemy03", "x": -32, "y": 250, "speed": 2, "movement": "stand", "target_x": 100, "target_y": 250},
+            {"type": "Enemy03", "x": gameWidth + 32, "y": 50, "speed": 2, "movement": "stand", "target_x": gameWidth-100, "target_y": 50},
+            {"type": "Enemy03", "x": gameWidth + 32, "y": 150, "speed": 2, "movement": "stand", "target_x": gameWidth-100, "target_y": 150},
+            {"type": "Enemy03", "x": gameWidth + 32, "y": 250, "speed": 2, "movement": "stand", "target_x": gameWidth-100, "target_y": 250}
+        ],
+        "triggered": False
+    },
+    {
+        "time": 30000,
+        "enemies": [
+            {"type": "Enemy01", "x": -32, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(400, 50), (400,600), (50, 600), (50, 50), (500, 50), (500, -500)]},
+            {"type": "Enemy01", "x": -132, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(400, 50), (400,600), (50, 600), (50, 50), (500, 50), (500, -500)]},
+            {"type": "Enemy01", "x": -232, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(400, 50), (400,600), (50, 600), (50, 50), (500, 50), (500, -500)]},
+            {"type": "Enemy01", "x": -332, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(400, 50), (400,600), (50, 600), (50, 50), (500, 50), (500, -500)]},
+            {"type": "Enemy01", "x": -432, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(400, 50), (400,600), (50, 600), (50, 50), (500, 50), (500, -500)]},
+            {"type": "Enemy01", "x": -532, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(400, 50), (400,600), (50, 600), (50, 50), (500, 50), (500, -500)]}
+        ],
+        "triggered": False
+    },
+    {
+        "time": 40000,
+        "enemies": [
+            {"type": "Enemy01", "x": gameWidth+32, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(50, 50), (50,600), (400, 600), (400, 50), (-100, 50), (-100, -500)]},
+            {"type": "Enemy01", "x": gameWidth+132, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(50, 50), (50,600), (400, 600), (400, 50), (-100, 50), (-100, -500)]},
+            {"type": "Enemy01", "x": gameWidth+232, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(50, 50), (50,600), (400, 600), (400, 50), (-100, 50), (-100, -500)]},
+            {"type": "Enemy01", "x": gameWidth+332, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(50, 50), (50,600), (400, 600), (400, 50), (-100, 50), (-100, -500)]},
+            {"type": "Enemy01", "x": gameWidth+432, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(50, 50), (50,600), (400, 600), (400, 50), (-100, 50), (-100, -500)]},
+            {"type": "Enemy01", "x": gameWidth+532, "y": 50, "speed": 2, "movement": "waypoint", "waypoints":[(50, 50), (50,600), (400, 600), (400, 50), (-100, 50), (-100, -500)]}
         ],
         "triggered": False
     },
     # Boss 波次
     {
-        "time": 60000,
+        "time": 55000,
         "enemies": [
             {
                 "type": "Boss",
@@ -277,7 +313,7 @@ class Enemy01(Enemy):
         
     def shoot(self, player_x, player_y):
         current_time = pygame.time.get_ticks()
-        cooldown = 1000
+        cooldown = 1500
         # 如果沒設置 last_shoot_time，可以在 __init__ 初始化
         if not hasattr(self, 'last_shoot_time'):
             self.last_shoot_time = 0
@@ -292,7 +328,7 @@ class Enemy01(Enemy):
 class Enemy02(Enemy):
     def __init__(self, x, y, speed, movement_strategy):
         super().__init__(x, y, speed, movement_strategy)
-        self.health = 5
+        self.health = 3
         self.img = imgEnemy02
         self.shoot_cooldown = 1000 # 子彈生成冷卻時間
         self.last_shoot_time = 0
@@ -314,13 +350,13 @@ class Enemy02(Enemy):
 class Enemy03(Enemy):
     def __init__(self, x, y, speed, movement_strategy):
         super().__init__(x, y, speed, movement_strategy)
-        self.health = 8
+        self.health = 5
         self.img = imgEnemy02  #TODO:更換圖片
-        self.shoot_cooldown = 200 # 子彈生成冷卻時間
+        self.shoot_cooldown = 100 # 子彈生成冷卻時間
         self.last_shoot_time = 0
         self.time = 0
         self.shoot_angle = 0
-        self.shoot_rotation_speed = 5
+        self.shoot_rotation_speed = 20
     
     def shoot(self, player_x, player_y):
         current_time = pygame.time.get_ticks()
@@ -365,7 +401,7 @@ class Boss(Enemy):
             return
         
         # 根據血量判斷是否啟動第二階段
-        if self.health <= self.health // 2 and not self.second_phase:
+        if self.health <= 50 and not self.second_phase:
             self.second_phase = True
             print("Boss 進入第二階段！")
         
@@ -448,10 +484,10 @@ class SineWaveMovement(MovementStrategy):
 
 # 移動策略(懸停)
 class StandMovement(MovementStrategy):
-    def __init__(self, target_y, target_x, move_speed = 2):
+    def __init__(self, target_x, target_y, move_speed = 2):
         super().__init__()
-        self.target_y = target_y
         self.target_x = target_x
+        self.target_y = target_y
         self.move_speed = move_speed
         self.reached = False  # 標記是否已經到達目標位置
         
@@ -520,6 +556,10 @@ class WaypointMovement(MovementStrategy):
             enemy.x = target_x
             enemy.y = target_y
             self.current_waypoint += 1
+            
+        # 出界檢測(僅上方)
+        if (enemy.y < -100):
+            enemy.is_out_of_bound = True
 
 # 移動策略(Boss)
 class BossMovement(MovementStrategy):
